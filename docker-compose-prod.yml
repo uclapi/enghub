@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  web:
+    build: .
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
+  postgres:
+    image: postgres:14-alpine
+    restart: always
+    env_file:
+      - .env

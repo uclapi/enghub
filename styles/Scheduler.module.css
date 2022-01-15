@@ -1,0 +1,43 @@
+.scheduler {
+  margin: auto;
+  width: 450px;
+  table-layout: fixed;
+  border: 1px solid lightgrey;
+}
+
+.dateControls {
+  margin-bottom: 10px;
+}
+
+.dateArrows {
+  margin-left: 15px;
+}
+
+.cell {
+  padding: 10px;
+  width: 50px;
+}
+
+@media (max-width: 575.98px) {
+  .cell {
+    padding: 5px;
+    width: 40px;
+  }
+}
+
+.available {
+  background-color: lightgreen;
+  cursor: pointer;
+  color: black;
+}
+
+.myBooking {
+  background-color: #ea1e59;
+  color: white;
+}
+
+.unavailable {
+  background-color: lightgrey;
+  opacity: 0.4;
+  cursor: not-allowed;
+}

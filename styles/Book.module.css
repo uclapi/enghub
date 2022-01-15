@@ -1,0 +1,10 @@
+.showRoomLayout {
+  font-size: 0.9em;
+  width: 175px;
+  border: 1px solid grey;
+  border-radius: 5px;
+  padding: 10px;
+  margin: auto;
+  cursor: pointer;
+  font-style: italic;
+}
