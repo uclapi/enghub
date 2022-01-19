@@ -1,17 +1,8 @@
 import { getSession } from "next-auth/react";
-import {
-  BOOKING_LENGTH,
-  MAX_DAYS_IN_ADVANCE_BOOKABLE,
-  MAX_MINUTES_BOOKABLE_PER_WEEK,
-} from "../../../lib/constants";
 import { prisma } from "../../../lib/db";
-import {
-  addDaysToDate,
-  getStartHourOfDate,
-  getWeekStartAndEndFromDate,
-} from "../../../lib/helpers";
+import { catchErrorsFrom } from "../../../lib/serverHelpers";
 
-export default async function handler(req, res) {
+export default catchErrorsFrom(async (req, res) => {
   const session = await getSession({ req });
   if (!session) {
     return res.redirect("/");
@@ -19,7 +10,7 @@ export default async function handler(req, res) {
 
   if (req.method === "DELETE") {
     if (req.query.bookingId == null) {
-      return res.status(400).json({
+      return res.status(404).json({
         error: true,
         message: "You did not provide a valid booking to cancel",
       });
@@ -33,14 +24,14 @@ export default async function handler(req, res) {
     });
 
     if (bookingExistsForUser == null) {
-      return res.status(400).json({
+      return res.status(422).json({
         error: true,
         message: "You did not provide a valid booking to cancel",
       });
     }
 
     if (new Date(bookingExistsForUser.datetime) <= new Date()) {
-      return res.status(400).json({
+      return res.status(422).json({
         error: true,
         message: "You cannot cancel bookings from the past",
       });
@@ -52,4 +43,4 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ error: false });
   }
-}
+});

@@ -10,8 +10,9 @@ import {
   getStartHourOfDate,
   getWeekStartAndEndFromDate,
 } from "../../../lib/helpers";
+import { catchErrorsFrom } from "../../../lib/serverHelpers";
 
-export default async function handler(req, res) {
+export default catchErrorsFrom(async (req, res) => {
   const session = await getSession({ req });
   if (!session) {
     return res.redirect("/");
@@ -19,7 +20,9 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     if (req.query?.date == null) {
-      return res.status(200).json({ bookings: null });
+      return res
+        .status(422)
+        .json({ error: true, message: "You did not provide a date filter." });
     }
 
     const start = new Date(req.query.date);
@@ -29,7 +32,7 @@ export default async function handler(req, res) {
 
     const bookings = await prisma.enghub_bookings.findMany({
       where: { datetime: { gte: start, lte: end } },
-      include: {enghub_users: {select: {full_name: true}}},
+      include: { enghub_users: { select: { full_name: true } } },
     });
 
     const bookingsByRoom = bookings.reduce((acc, cur) => {
@@ -55,7 +58,7 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     if (req.body?.datetime == null || req.body?.room_name == null) {
-      return res.status(400).json({
+      return res.status(422).json({
         error: true,
         message: "You did not provide a valid date/time/room for the booking",
       });
@@ -65,7 +68,7 @@ export default async function handler(req, res) {
     datetime.setSeconds(0, 0);
 
     if (datetime < getStartHourOfDate(new Date())) {
-      return res.status(400).json({
+      return res.status(422).json({
         error: true,
         message: "You cannot book a room in the past",
       });
@@ -75,13 +78,14 @@ export default async function handler(req, res) {
       where: {
         datetime,
         room_name: req.body.room_name,
-      }
+      },
     });
 
     if (existingBookingsCount !== 0) {
-      return res.status(400).json({
+      return res.status(403).json({
         error: true,
-        message: 'This slot is already booked. Please try booking another available slot.',
+        message:
+          "This slot is already booked. Please try booking another available slot.",
       });
     }
 
@@ -104,7 +108,7 @@ export default async function handler(req, res) {
         numBookingsThisWeek.length * BOOKING_LENGTH >=
         MAX_MINUTES_BOOKABLE_PER_WEEK
       ) {
-        return res.status(400).json({
+        return res.status(403).json({
           error: true,
           message:
             "You have reached your bookable minutes this week. Please try again next week or cancel an existing upcoming booking for this week.",
@@ -117,7 +121,7 @@ export default async function handler(req, res) {
       !session.user.isAdmin &&
       datetime > addDaysToDate(new Date(), MAX_DAYS_IN_ADVANCE_BOOKABLE)
     ) {
-      return res.status(400).json({
+      return res.status(403).json({
         error: true,
         message: `You can only book up to ${MAX_DAYS_IN_ADVANCE_BOOKABLE} days in advance.`,
       });
@@ -133,4 +137,4 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ error: false, datetime: req.body.datetime });
   }
-}
+});

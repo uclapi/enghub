@@ -2,71 +2,22 @@ import { getSession } from "next-auth/react";
 import Head from "next/head";
 import { useState } from "react";
 import { Panel, Button, Form, Input, Loader, Message } from "rsuite";
-import useSWR, { mutate } from "swr";
 import LoginMessage from "../components/LoginMessage.react";
 import {
   addAdmin,
   updateRoomActiveState,
   updateRoomCapacity,
 } from "../lib/api";
-import { fetcher, pushSuccessToast } from "../lib/helpers";
+import { pushSuccessToast } from "../lib/helpers";
 import styles from "../styles/Admin.module.css";
 import EditIcon from "@rsuite/icons/Edit";
 import CheckOutlineIcon from "@rsuite/icons/CheckOutline";
 import CloseOutlineIcon from "@rsuite/icons/CloseOutline";
+import { useRooms } from "../lib/hooks";
 
-const useRooms = () => {
-  const { data, error, mutate } = useSWR(`/api/rooms`, fetcher);
-  return {
-    rooms: data ? data.rooms : {},
-    isLoading: !error && !data,
-    isError: error || data?.error,
-    mutate,
-  };
-};
-
-export default function Admin({ session }) {
-  const [email, setEmail] = useState("");
+const EditRooms = () => {
   const { rooms, isLoading, isError, mutate } = useRooms();
   const [editingRoom, setEditingRoom] = useState(null);
-
-  const renderAddAdminSection = () => (
-    <>
-      <h4>Manage Admins</h4>
-      <p>
-        To add an administrator to the system, please enter their UCL email
-        address below. When they next login, they will be granted administrator
-        privileges:
-      </p>
-      <br />
-      <Form
-        layout="inline"
-        onSubmit={() => {
-          addAdmin(email).then(() =>
-            pushSuccessToast(
-              "Administrator added successfully! This will take effect when they next login."
-            )
-          );
-        }}
-      >
-        <Form.Group>
-          <Form.Control
-            name="email"
-            required
-            pattern=".+@ucl\.ac\.uk"
-            value={email}
-            onChange={setEmail}
-            placeholder="e.g., j.doe@ucl.ac.uk"
-            title="Please enter a valid UCL email address."
-            type="email"
-          />
-        </Form.Group>
-        <Button type="submit" appearance="primary">
-          Add admin
-        </Button>
-      </Form>
-    </>
-  );
 
   const EditCell = ({ room }) => {
     const [value, setValue] = useState(room.capacity);
@@ -110,26 +61,28 @@ export default function Admin({ session }) {
       </>
     );
 
-  const renderRoomsSection = () => (
+  return (
     <>
       <h4>Manage Rooms</h4>
       <p>
-        You can add rooms, edit their capacities, or mark them as inactive
-        below.
+        You can edit room capacities or mark rooms as inactive below.
         <br />
         <i>
-          Note: marking a room as unactive will <strong>not</strong> delete
-          existing upcoming bookings for this room, but will prevent new
-          bookings from being made.
+          Note: marking a room as inactive will <strong>not</strong> delete
+          existing bookings for this room, but will prevent new bookings from
+          being made.
         </i>
       </p>
+
       {isLoading && <Loader content="Loading..." vertical />}
+
       {isError && (
         <Message type="error" showIcon className="error-message">
           There was an error loading the current rooms. Please try again later
           or contact us if the error persists.
         </Message>
       )}
+
       {!isLoading && !isError && (
         <table height={200} className={styles.roomsTable}>
           <tr>
@@ -176,14 +129,50 @@ export default function Admin({ session }) {
       )}
     </>
   );
+};
 
-  const renderContent = () => (
+const AddAdmins = () => {
+  const [email, setEmail] = useState("");
+  return (
     <>
-      {renderAddAdminSection()}
-      {renderRoomsSection()}
+      <h4>Manage Admins</h4>
+      <p>
+        To add an administrator to the system, please enter their UCL email
+        address below. When they next login, they will be granted administrator
+        privileges:
+      </p>
+      <br />
+      <Form
+        layout="inline"
+        onSubmit={() => {
+          addAdmin(email).then(() =>
+            pushSuccessToast(
+              "Administrator added successfully! This will take effect when they next login."
+            )
+          );
+        }}
+      >
+        <Form.Group>
+          <Form.Control
+            name="email"
+            required
+            pattern=".+@ucl\.ac\.uk"
+            value={email}
+            onChange={setEmail}
+            placeholder="e.g., j.doe@ucl.ac.uk"
+            title="Please enter a valid UCL email address."
+            type="email"
+          />
+        </Form.Group>
+        <Button type="submit" appearance="primary">
+          Add admin
+        </Button>
+      </Form>
     </>
   );
+};
 
+export default function Admin({ session }) {
   return (
     <>
       <Head>
@@ -191,7 +180,14 @@ export default function Admin({ session }) {
       </Head>
 
       <Panel header={<h2>Administration</h2>} bordered className="card">
-        {session ? renderContent() : <LoginMessage />}
+        {session ? (
+          <>
+            <AddAdmins />
+            <EditRooms />
+          </>
+        ) : (
+          <LoginMessage />
+        )}
       </Panel>
     </>
   );

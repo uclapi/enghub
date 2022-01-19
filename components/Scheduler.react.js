@@ -1,6 +1,5 @@
 import ArrowLeftIcon from "@rsuite/icons/ArrowLeft";
 import ArrowRightIcon from "@rsuite/icons/ArrowRight";
-import { confirm } from "@rsuite/interactions";
 import { useState } from "react";
 import {
   ButtonGroup,
@@ -11,43 +10,19 @@ import {
   Popover,
   Whisper,
 } from "rsuite";
-import useSWR from "swr";
 import { book, cancelBooking } from "../lib/api";
 import { MAX_DAYS_IN_ADVANCE_BOOKABLE, SLOTS } from "../lib/constants";
 import {
   addDaysToDate,
-  fetcher,
   getStartHourOfDate,
   getDateString,
   confirmDialog,
   pushSuccessToast,
+  getToday,
+  getTimestamp,
 } from "../lib/helpers";
+import { useBookings, useRooms } from "../lib/hooks";
 import styles from "../styles/Scheduler.module.css";
-
-const useBookings = (date) => {
-  const { data, error, mutate } = useSWR(`/api/bookings?date=${date}`, fetcher);
-  return {
-    bookings: data ? data.bookings : {},
-    isLoading: !error && !data,
-    isError: error || data?.error,
-    mutate,
-  };
-};
-
-const useRooms = () => {
-  const { data, error } = useSWR(`/api/rooms`, fetcher);
-  return {
-    rooms: data ? data.rooms : {},
-    isLoading: !error && !data,
-    isError: error || data?.error,
-  };
-};
-
-const getToday = () => {
-  const date = new Date();
-  date.setHours(0, 0, 0);
-  return date;
-};
 
 export default function Scheduler({ session }) {
   const [date, setDate] = useState(getToday());
@@ -67,24 +42,29 @@ export default function Scheduler({ session }) {
   const isError = isErrorBookings || isErrorRooms;
   const isLoading = isLoadingBookings || isLoadingRooms;
 
-  const getTimestamp = (date, time) => {
-    const newDate = new Date(date);
-    newDate.setHours(...time.split(":"), 0, 0);
-    return newDate;
-  };
-
-  const startCancelBooking = async (bookingId) => {
-    if (await confirmDialog("Are you sure you want to cancel this booking?")) {
-      await cancelBooking(bookingId).then(() => {
-        pushSuccessToast('Booking cancelled successfully!')
-      });
-      mutate();
-    }
-  };
+  const renderBookedCell = (booking) => (
+    <td
+      className={`${styles.cell} ${
+        booking.isOwner ? styles.myBooking : styles.unavailable
+      }`}
+      onClick={async () => {
+        if (
+          booking.isOwner &&
+          (await confirmDialog("Are you sure you want to cancel this booking?"))
+        ) {
+          await cancelBooking(booking.id).then(() => {
+            pushSuccessToast("Booking cancelled successfully!");
+            mutate();
+          });
+        }
+      }}
+    >
+      <span>Booked</span>
+    </td>
+  );
 
   const renderCell = (date, time, roomName) => {
     const timestamp = getTimestamp(date, time);
-
     const booking = bookings?.[roomName]?.find(
       (b) => b.datetime === timestamp.toISOString()
     );
@@ -114,32 +94,10 @@ export default function Scheduler({ session }) {
             </Popover>
           }
         >
-          <td
-            className={`${styles.cell} ${
-              booking.isOwner ? styles.myBooking : styles.unavailable
-            }`}
-            onClick={() => {
-              if (booking.isOwner) {
-                startCancelBooking(booking.id);
-              }
-            }}
-          >
-            <span>Booked</span>
-          </td>
+          {renderBookedCell(booking)}
         </Whisper>
       ) : (
-        <td
-          className={`${styles.cell} ${
-            booking.isOwner ? styles.myBooking : styles.unavailable
-          }`}
-          onClick={() => {
-            if (booking.isOwner) {
-              startCancelBooking(booking.id);
-            }
-          }}
-        >
-          <span>Booked</span>
-        </td>
+        renderBookedCell(booking)
       );
     }
 
@@ -151,16 +109,11 @@ export default function Scheduler({ session }) {
       <td
         className={`${styles.cell} ${styles.available}`}
         onClick={async () => {
-          if (
-            await confirm("Are you sure you want to book this slot?", {
-              okButtonText: "Yes",
-              cancelButtonText: "No",
-            })
-          ) {
+          if (await confirmDialog("Are you sure you want to book this slot?")) {
             await book(timestamp, roomName).then(() => {
-              pushSuccessToast('Room booked successfully!')
+              pushSuccessToast("Room booked successfully!");
+              mutate();
             });
-            mutate();
           }
         }}
       >
@@ -169,64 +122,48 @@ export default function Scheduler({ session }) {
     );
   };
 
-  const renderContent = () => {
-    if (isError) {
-      return (
-        <Message type="error" showIcon className="error-message">
-          There was an error loading the slots. Please try again later or
-          contact us if the error persists.
-        </Message>
-      );
-    }
-
-    if (isLoading) {
-      return <Loader backdrop content="Loading..." vertical />;
-    }
-
-    return (
-      <table className={styles.scheduler}>
-        <thead>
+  const renderScheduleTable = () => (
+    <table className={styles.scheduler}>
+      <thead>
+        <tr>
+          <th className={styles.cell}>Time/Room</th>
+          {rooms.map(
+            (room) =>
+              room.active && (
+                <Whisper
+                  trigger="hover"
+                  placement="right"
+                  controlId={`room-title-${room.name}`}
+                  enterable
+                  speaker={
+                    <Popover title={`Capacity: ${room.capacity}`}></Popover>
+                  }
+                >
+                  <th className={styles.cell}>{room.name}</th>
+                </Whisper>
+              )
+          )}
+        </tr>
+      </thead>
+      <tbody>
+        {SLOTS.map((time) => (
           <tr>
-            <th className={styles.cell}>Time/Room</th>
+            <th className={styles.cell}>{time}</th>
             {rooms.map(
-              (room) =>
-                room.active && (
-                  <Whisper
-                    trigger="hover"
-                    placement="right"
-                    controlId={`room-title-${room.name}`}
-                    enterable
-                    speaker={
-                      <Popover title={`Capacity: ${room.capacity}`}></Popover>
-                    }
-                  >
-                    <th className={styles.cell}>{room.name}</th>
-                  </Whisper>
-                )
+              (room) => room.active && renderCell(date, time, room.name)
             )}
           </tr>
-        </thead>
-        <tbody>
-          {SLOTS.map((time) => (
-            <tr>
-              <th className={styles.cell}>{time}</th>
-              {rooms.map(
-                (room) => room.active && renderCell(date, time, room.name)
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  };
+        ))}
+      </tbody>
+    </table>
+  );
 
-  const minDate = getToday();
-  const maxDate = addDaysToDate(minDate, MAX_DAYS_IN_ADVANCE_BOOKABLE);
-  maxDate.setHours(23, 59, 59);
+  const renderDateControls = () => {
+    const minDate = getToday();
+    const maxDate = addDaysToDate(minDate, MAX_DAYS_IN_ADVANCE_BOOKABLE);
+    maxDate.setHours(23, 59, 59);
 
-  return (
-    <>
-      <h4>{getDateString(date)}</h4>
+    return (
       <div className={styles.dateControls}>
         <DatePicker
           placeholder="Go to date"
@@ -244,6 +181,7 @@ export default function Scheduler({ session }) {
           ]}
           oneTap
         />
+
         <ButtonGroup className={styles.dateArrows}>
           <IconButton
             icon={<ArrowLeftIcon />}
@@ -257,7 +195,13 @@ export default function Scheduler({ session }) {
           />
         </ButtonGroup>
       </div>
+    );
+  };
 
+  return (
+    <>
+      <h4>{getDateString(date)}</h4>
+      {renderDateControls()}
       {session.user.isAdmin && (
         <p>
           <i>
@@ -267,7 +211,16 @@ export default function Scheduler({ session }) {
         </p>
       )}
 
-      {renderContent()}
+      {isError && (
+        <Message type="error" showIcon className="error-message">
+          There was an error loading the slots. Please try again later or
+          contact us if the error persists.
+        </Message>
+      )}
+
+      {isLoading && <Loader backdrop content="Loading..." vertical />}
+
+      {!isError && !isLoading && renderScheduleTable()}
     </>
   );
 }

@@ -30,6 +30,8 @@ export default function Book({ session }) {
       </Modal>
 
       <Panel
+        className="card"
+        bordered
         header={
           <>
             <h2>Book a Room</h2>
@@ -41,8 +43,6 @@ export default function Book({ session }) {
             </div>
           </>
         }
-        bordered
-        className="card"
       >
         {session ? <Scheduler session={session} /> : <LoginMessage />}
       </Panel>
@@ -51,9 +51,5 @@ export default function Book({ session }) {
 }
 
 export async function getServerSideProps(ctx) {
-  return {
-    props: {
-      session: await getSession(ctx),
-    },
-  };
+  return { props: { session: await getSession(ctx) } };
 }

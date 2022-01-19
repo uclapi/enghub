@@ -1,7 +1,8 @@
 import { getSession } from "next-auth/react";
 import { prisma } from "../../../lib/db";
+import { catchErrorsFrom } from "../../../lib/serverHelpers";
 
-export default async function handler(req, res) {
+export default catchErrorsFrom(async (req, res) => {
   const session = await getSession({ req });
   if (!session) {
     return res.redirect("/");
@@ -9,9 +10,9 @@ export default async function handler(req, res) {
 
   if (req.method === "PUT") {
     if (!session.user.isAdmin) {
-      return res.status(400).json({
+      return res.status(403).json({
         error: true,
-        message: "You do not have permission to edit rooms",
+        message: "You do not have permission to edit rooms.",
       });
     }
 
@@ -21,18 +22,16 @@ export default async function handler(req, res) {
 
     if (existingRoomCount !== 1) {
       return res
-        .status(400)
+        .status(404)
         .json({ error: true, message: "The provided room does not exist" });
     }
 
     if (req.body?.capacity) {
       if (req.body?.capacity <= 0) {
-        return res
-          .status(400)
-          .json({
-            error: true,
-            message: "You did not provide a valid capacity",
-          });
+        return res.status(422).json({
+          error: true,
+          message: "You did not provide a valid capacity",
+        });
       }
 
       await prisma.enghub_rooms.update({
@@ -50,4 +49,4 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ error: false });
   }
-}
+});
