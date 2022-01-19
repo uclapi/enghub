@@ -3,15 +3,14 @@ import {
   BOOKING_LENGTH,
   MAX_DAYS_IN_ADVANCE_BOOKABLE,
   MAX_MINUTES_BOOKABLE_PER_WEEK,
-} from "../../lib/constants";
-import { prisma } from "../../lib/db";
+} from "../../../lib/constants";
+import { prisma } from "../../../lib/db";
 import {
   addDaysToDate,
   getStartHourOfDate,
   getWeekStartAndEndFromDate,
-} from "../../lib/helpers";
+} from "../../../lib/helpers";
 
-const rooms = ["G02", "G03", "211", "212"];
 export default async function handler(req, res) {
   const session = await getSession({ req });
   if (!session) {
@@ -28,21 +27,25 @@ export default async function handler(req, res) {
     const end = new Date(start);
     end.setUTCHours(23, 59, 59, 999);
 
-    const bookings = await prisma.bookings.findMany({
+    const bookings = await prisma.enghub_bookings.findMany({
       where: { datetime: { gte: start, lte: end } },
+      include: {enghub_users: {select: {full_name: true}}},
     });
 
     const bookingsByRoom = bookings.reduce((acc, cur) => {
       const record = {
+        id: cur.id,
+        roomName: cur.room_name,
         datetime: cur.datetime,
         // Whether the booking belongs to the logged in user
-        isOwner: session.user.id === cur.cn,
-        // Only select user CN for admins
-        cn: session.user.isAdmin ? cur.cn : null,
+        isOwner: session.user.email === cur.email,
+        // Only select user details for admins
+        fullName: session.user.isAdmin ? cur.enghub_users.full_name : null,
+        email: session.user.isAdmin ? cur.email : null,
       };
 
-      if (!acc[cur.room]) acc[cur.room] = [record];
-      else acc[cur.room].push(record);
+      if (!acc[cur.room_name]) acc[cur.room_name] = [record];
+      else acc[cur.room_name].push(record);
 
       return acc;
     }, {});
@@ -51,7 +54,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    if (req.body?.datetime == null || req.body?.room == null) {
+    if (req.body?.datetime == null || req.body?.room_name == null) {
       return res.status(400).json({
         error: true,
         message: "You did not provide a valid date/time/room for the booking",
@@ -68,18 +71,32 @@ export default async function handler(req, res) {
       });
     }
 
+    const existingBookingsCount = await prisma.enghub_bookings.count({
+      where: {
+        datetime,
+        room_name: req.body.room_name,
+      }
+    });
+
+    if (existingBookingsCount !== 0) {
+      return res.status(400).json({
+        error: true,
+        message: 'This slot is already booked. Please try booking another available slot.',
+      });
+    }
+
     // Non-admins can only book a certain number of minutes per week
     if (!session.user.isAdmin) {
       const { start: weekStart, end: weekEnd } =
         getWeekStartAndEndFromDate(datetime);
 
-      const numBookingsThisWeek = await prisma.bookings.findMany({
+      const numBookingsThisWeek = await prisma.enghub_bookings.findMany({
         where: {
           datetime: {
             gte: weekStart,
             lte: weekEnd,
           },
-          cn: session.user.id,
+          email: session.user.email,
         },
       });
 
@@ -106,55 +123,14 @@ export default async function handler(req, res) {
       });
     }
 
-    const query = await prisma.bookings.create({
+    const query = await prisma.enghub_bookings.create({
       data: {
         datetime,
-        cn: session.user.id,
-        room: req.body.room,
+        email: session.user.email,
+        room_name: req.body.room_name,
       },
     });
 
     return res.status(200).json({ error: false, datetime: req.body.datetime });
-  }
-
-  if (req.method === "DELETE") {
-    if (req.body?.datetime == null || req.body?.room == null) {
-      return res.status(400).json({
-        error: true,
-        message: "You did not provide a valid booking to cancel",
-      });
-    }
-
-    const datetime = new Date(req.body.datetime);
-
-    const bookingExistsForUser = await prisma.bookings.findFirst({
-      where: {
-        cn: { equals: session.user.id },
-        datetime: { equals: datetime },
-        room: { equals: req.body.room },
-      },
-    });
-
-    if (bookingExistsForUser == null) {
-      return res.status(400).json({
-        error: true,
-        message: "You did not provide a valid booking to cancel",
-      });
-    }
-
-    if (datetime <= new Date()) {
-      return res.status(400).json({
-        error: true,
-        message: "You cannot cancel bookings from the past",
-      });
-    }
-
-    await prisma.bookings.delete({
-      where: {
-        datetime_room: { datetime, room: req.body.room },
-      },
-    });
-
-    return res.status(200).json({ error: false });
   }
 }

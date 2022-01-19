@@ -2,6 +2,7 @@ import { useSession } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
 import { Button, Panel } from "rsuite";
+import { MAX_MINUTES_BOOKABLE_PER_WEEK } from "../lib/constants";
 import styles from "../styles/Home.module.css";
 
 export default function Home() {
@@ -36,6 +37,8 @@ export default function Home() {
         students in Undergraduate Engineering and members of Engineering-related
         student societies. The Hub includes 2 large social working spaces and 5
         bookable group work rooms.
+        <br />
+        <i>Note: students can book a maximum of {MAX_MINUTES_BOOKABLE_PER_WEEK} minutes per week.</i>
         <h3>Opening Times</h3>
         Mon - Fri: 08:00 - 22:00
         <br />

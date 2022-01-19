@@ -48,22 +48,47 @@ export default NextAuth({
   callbacks: {
     session: async ({ session, token }) => {
       if (token?.sub != null && session?.user != null) {
-        session.user.id = token.sub;
         session.user.isAdmin = token.isAdmin;
       }
       return session;
     },
     jwt: async ({ token }) => {
       const isAdmin =
-        (await prisma.admins.findFirst({
-          where: { cn: { equals: token.sub } },
+        (await prisma.enghub_users.findFirst({
+          where: { email: { equals: token.email }, is_admin: { equals: true } },
         })) != null;
 
       token.isAdmin = isAdmin;
       return token;
     },
+    signIn: async ({ profile }) => {
+      // Only Engineering students are allowed to book rooms in EngHub
+      if (profile.ucl_groups.indexOf("engscifac-all") > -1) {
+        return true;
+      }
+
+      // Admins may be non-Engineering
+      const usersCount = await prisma.enghub_users.count({
+        where: { email: { equals: profile.email }, is_admin: { equals: true } },
+      });
+
+      return usersCount === 1;
+    },
+  },
+  events: {
+    signIn: async (message) => {
+      await prisma.enghub_users.upsert({
+        where: { email: message.user.email },
+        update: { email: message.user.email },
+        create: {
+          full_name: message.user.name,
+          email: message.user.email,
+          is_admin: false,
+        },
+      });
+    },
   },
   session: {
-    maxAge: 24 * 60 * 60 // One day idle session expiry
-  }
+    maxAge: 24 * 60 * 60, // One day idle session expiry
+  },
 });

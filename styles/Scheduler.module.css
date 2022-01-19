@@ -36,6 +36,19 @@
   color: white;
 }
 
+.myBooking:hover {
+  background-color: blue;
+  cursor: pointer;
+}
+
+.myBooking:hover span {
+  display: none;
+}
+
+.myBooking:hover:before {
+  content: 'Cancel?';
+}
+
 .unavailable {
   background-color: lightgrey;
   opacity: 0.4;

@@ -7,14 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model admins {
-  cn String @id @db.VarChar(10)
+model enghub_bookings {
+  id           Int          @id @default(autoincrement())
+  datetime     DateTime     @db.Timestamptz(6)
+  room_name    String       @db.VarChar(5)
+  email        String       @db.VarChar(100)
+  enghub_users enghub_users @relation(fields: [email], references: [email], onDelete: NoAction, onUpdate: NoAction)
+  enghub_rooms enghub_rooms @relation(fields: [room_name], references: [name], onDelete: NoAction, onUpdate: NoAction)
 }
 
-model bookings {
-  datetime DateTime @db.Timestamptz(6)
-  room     String   @db.VarChar(5)
-  cn       String   @db.VarChar(10)
+model enghub_rooms {
+  name            String            @id @db.VarChar(6)
+  capacity        Int
+  active          Boolean           @default(true)
+  enghub_bookings enghub_bookings[]
+}
 
-  @@id([datetime, room])
+model enghub_users {
+  email           String            @id @db.VarChar(100)
+  full_name       String            @db.VarChar(100)
+  is_admin        Boolean           @default(false)
+  enghub_bookings enghub_bookings[]
 }

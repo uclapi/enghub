@@ -12,32 +12,17 @@ import {
   Whisper,
 } from "rsuite";
 import useSWR from "swr";
-import { MAX_DAYS_IN_ADVANCE_BOOKABLE, ROOMS, SLOTS } from "../lib/constants";
+import { book, cancelBooking } from "../lib/api";
+import { MAX_DAYS_IN_ADVANCE_BOOKABLE, SLOTS } from "../lib/constants";
 import {
   addDaysToDate,
   fetcher,
   getStartHourOfDate,
-  pushErrorToast,
   getDateString,
+  confirmDialog,
+  pushSuccessToast,
 } from "../lib/helpers";
 import styles from "../styles/Scheduler.module.css";
-
-const book = async (datetime, room) => {
-  return await fetch("/api/bookings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ datetime, room }),
-  })
-    .then((res) => res.json())
-    .then((res) => {
-      if (res.error) pushErrorToast(res.message);
-      return res;
-    })
-    .catch((err) => {
-      console.error(err);
-      pushErrorToast(err.message);
-    });
-};
 
 const useBookings = (date) => {
   const { data, error, mutate } = useSWR(`/api/bookings?date=${date}`, fetcher);
@@ -49,6 +34,15 @@ const useBookings = (date) => {
   };
 };
 
+const useRooms = () => {
+  const { data, error } = useSWR(`/api/rooms`, fetcher);
+  return {
+    rooms: data ? data.rooms : {},
+    isLoading: !error && !data,
+    isError: error || data?.error,
+  };
+};
+
 const getToday = () => {
   const date = new Date();
   date.setHours(0, 0, 0);
@@ -57,9 +51,21 @@ const getToday = () => {
 
 export default function Scheduler({ session }) {
   const [date, setDate] = useState(getToday());
-  const { bookings, isLoading, isError, mutate } = useBookings(
-    date.toISOString().substring(0, 10)
-  );
+  const {
+    bookings,
+    isLoading: isLoadingBookings,
+    isError: isErrorBookings,
+    mutate,
+  } = useBookings(date.toISOString().substring(0, 10));
+
+  const {
+    rooms,
+    isLoading: isLoadingRooms,
+    isError: isErrorRooms,
+  } = useRooms();
+
+  const isError = isErrorBookings || isErrorRooms;
+  const isLoading = isLoadingBookings || isLoadingRooms;
 
   const getTimestamp = (date, time) => {
     const newDate = new Date(date);
@@ -67,19 +73,28 @@ export default function Scheduler({ session }) {
     return newDate;
   };
 
-  const renderCell = (date, time, room) => {
+  const startCancelBooking = async (bookingId) => {
+    if (await confirmDialog("Are you sure you want to cancel this booking?")) {
+      await cancelBooking(bookingId).then(() => {
+        pushSuccessToast('Booking cancelled successfully!')
+      });
+      mutate();
+    }
+  };
+
+  const renderCell = (date, time, roomName) => {
     const timestamp = getTimestamp(date, time);
 
-    const booking = bookings?.[room]?.find(
+    const booking = bookings?.[roomName]?.find(
       (b) => b.datetime === timestamp.toISOString()
     );
 
     if (booking) {
-      return booking.cn ? (
+      return booking.fullName ? (
         <Whisper
           trigger="hover"
           placement="right"
-          controlId={`control-id-${booking.datetime}-${booking.room}`}
+          controlId={`control-id-${booking.datetime}-${booking.roomName}`}
           enterable
           speaker={
             <Popover title="Details (admin-only)">
@@ -87,12 +102,12 @@ export default function Scheduler({ session }) {
                 Booked by{" "}
                 <a
                   href={`mailto:${
-                    booking.cn
-                  }@ucl.ac.uk}?subject=EngHub%20Room%20${room}%20Booking%20(${timestamp.toUTCString()})`}
+                    booking.email
+                  }?subject=EngHub%20Room%20${roomName}%20Booking%20(${timestamp.toUTCString()})`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {booking.cn}
+                  {booking.fullName}
                 </a>
                 .
               </p>
@@ -103,8 +118,13 @@ export default function Scheduler({ session }) {
             className={`${styles.cell} ${
               booking.isOwner ? styles.myBooking : styles.unavailable
             }`}
+            onClick={() => {
+              if (booking.isOwner) {
+                startCancelBooking(booking.id);
+              }
+            }}
           >
-            Booked
+            <span>Booked</span>
           </td>
         </Whisper>
       ) : (
@@ -112,8 +132,13 @@ export default function Scheduler({ session }) {
           className={`${styles.cell} ${
             booking.isOwner ? styles.myBooking : styles.unavailable
           }`}
+          onClick={() => {
+            if (booking.isOwner) {
+              startCancelBooking(booking.id);
+            }
+          }}
         >
-          Booked
+          <span>Booked</span>
         </td>
       );
     }
@@ -132,7 +157,9 @@ export default function Scheduler({ session }) {
               cancelButtonText: "No",
             })
           ) {
-            await book(timestamp, room);
+            await book(timestamp, roomName).then(() => {
+              pushSuccessToast('Room booked successfully!')
+            });
             mutate();
           }
         }}
@@ -161,16 +188,31 @@ export default function Scheduler({ session }) {
         <thead>
           <tr>
             <th className={styles.cell}>Time/Room</th>
-            {ROOMS.map((room) => (
-              <th className={styles.cell}>{room}</th>
-            ))}
+            {rooms.map(
+              (room) =>
+                room.active && (
+                  <Whisper
+                    trigger="hover"
+                    placement="right"
+                    controlId={`room-title-${room.name}`}
+                    enterable
+                    speaker={
+                      <Popover title={`Capacity: ${room.capacity}`}></Popover>
+                    }
+                  >
+                    <th className={styles.cell}>{room.name}</th>
+                  </Whisper>
+                )
+            )}
           </tr>
         </thead>
         <tbody>
           {SLOTS.map((time) => (
             <tr>
               <th className={styles.cell}>{time}</th>
-              {ROOMS.map((room) => renderCell(date, time, room))}
+              {rooms.map(
+                (room) => room.active && renderCell(date, time, room.name)
+              )}
             </tr>
           ))}
         </tbody>

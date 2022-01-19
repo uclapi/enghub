@@ -4,8 +4,9 @@ import Head from "next/head";
 import { Button, Loader, Message, Panel } from "rsuite";
 import useSWR from "swr";
 import LoginMessage from "../components/LoginMessage.react";
+import { cancelBooking } from "../lib/api";
 import { MAX_MINUTES_BOOKABLE_PER_WEEK } from "../lib/constants";
-import { fetcher, getDateTimeString, pushErrorToast } from "../lib/helpers";
+import { confirmDialog, fetcher, getDateTimeString } from "../lib/helpers";
 
 const useMyBookings = () => {
   const { data, error, mutate } = useSWR(`/api/my_bookings`, fetcher);
@@ -15,23 +16,6 @@ const useMyBookings = () => {
     isError: error || data?.error,
     mutate,
   };
-};
-
-const cancelBooking = async (datetime, room) => {
-  return await fetch("/api/bookings", {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ datetime, room }),
-  })
-    .then((res) => res.json())
-    .then((res) => {
-      if (res.error) pushErrorToast(res.message);
-      return res;
-    })
-    .catch((err) => {
-      console.error(err);
-      pushErrorToast(err.message);
-    });
 };
 
 export default function Book({ session }) {
@@ -58,24 +42,18 @@ export default function Book({ session }) {
         {!future.length && <p>No bookings</p>}
         <ul className="my_bookings">
           {future.map((b) => (
-            <li>
-              {getDateTimeString(new Date(b.datetime))}
-              {" "}
-              - Room {b.room}.{" "}
+            <li key={`booking-${b.id}`}>
+              {getDateTimeString(new Date(b.datetime))} - Room {b.room_name}.{" "}
               <Button
                 color="red"
                 appearance="ghost"
                 onClick={async () => {
                   if (
-                    await confirm(
-                      "Are you sure you want to cancel this booking?",
-                      {
-                        okButtonText: "Yes",
-                        cancelButtonText: "No",
-                      }
+                    await confirmDialog(
+                      "Are you sure you want to cancel this booking?"
                     )
                   ) {
-                    await cancelBooking(b.datetime, b.room); // TODO: should we just give bookings an ID instead?
+                    await cancelBooking(b.id);
                     mutate();
                   }
                 }}
@@ -90,10 +68,8 @@ export default function Book({ session }) {
         {!past.length && <p>No bookings</p>}
         <ul className="my_bookings">
           {past.map((b) => (
-            <li>
-              {getDateTimeString(new Date(b.datetime))}
-              {" "}
-              - Room {b.room}.{" "}
+            <li key={`booking-${b.id}`}>
+              {getDateTimeString(new Date(b.datetime))} - Room {b.room_name}.{" "}
             </li>
           ))}
         </ul>

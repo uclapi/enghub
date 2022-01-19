@@ -17,24 +17,29 @@ export default function NavBar() {
           <li>
             <Link href="/my_bookings">My Bookings</Link>
           </li>
+          {session.user.isAdmin && (
+            <li>
+              <Link href="/admin">Admin</Link>
+            </li>
+          )}
           <li className="right">
             <span onClick={() => signOut()}>Logout</span>
           </li>
         </ul>
       </nav>
     );
-  } else {
-    return (
-      <nav>
-        <ul>
-          <li>
-            <Link href="/">Home</Link>
-          </li>
-          <li className="right">
-            <span onClick={() => signIn("uclapi")}>Login</span>
-          </li>
-        </ul>
-      </nav>
-    );
   }
+
+  return (
+    <nav>
+      <ul>
+        <li>
+          <Link href="/">Home</Link>
+        </li>
+        <li className="right">
+          <span onClick={() => signIn("uclapi")}>Login</span>
+        </li>
+      </ul>
+    </nav>
+  );
 }

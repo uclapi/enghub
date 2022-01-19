@@ -1,0 +1,18 @@
+.roomsTable {
+  margin: auto;
+}
+
+.roomsTable td, .roomsTable th {
+  padding: 5px;
+}
+
+.tableEditInput {
+  width: 50px;
+  padding-right: 5px;
+  display: inline;
+}
+
+.icon {
+  cursor: pointer;
+  margin-left: 5px;
+}

@@ -8,9 +8,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const bookings = await prisma.bookings.findMany({
-      where: { cn: { equals: session.user.id } },
-      select: { datetime: true, room: true }, // Don't select user CN
+    const bookings = await prisma.enghub_bookings.findMany({
+      where: { email: { equals: session.user.email } },
+      select: { datetime: true, room_name: true, id: true }, // Don't select user email
+      orderBy: [{datetime: 'asc'}] // Most recent first
     });
 
     return res.status(200).json({ bookings });
