@@ -79,7 +79,7 @@ export default NextAuth({
     signIn: async (message) => {
       await prisma.enghub_users.upsert({
         where: { email: message.user.email },
-        update: { email: message.user.email },
+        update: { full_name: message.user.name },
         create: {
           full_name: message.user.name,
           email: message.user.email,
