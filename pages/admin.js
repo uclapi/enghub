@@ -159,7 +159,7 @@ const AddAdmins = () => {
             pattern=".+@ucl\.ac\.uk"
             value={email}
             onChange={setEmail}
-            placeholder="e.g., j.doe@ucl.ac.uk"
+            placeholder="e.g., zxxxxxx@ucl.ac.uk"
             title="Please enter a valid UCL email address."
             type="email"
           />
