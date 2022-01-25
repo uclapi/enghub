@@ -1,36 +1,53 @@
-name: "Publish Docker image to GitHub Packages"
+name: "Test and Deploy to Staging"
+
 on:
   push:
-    branches: "main"
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    if: github.ref == 'refs/heads/master'
+    environment: staging
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract non-public secrets
+        env:
+          FILES: ${{ secrets.FILES }}
+        run: |
+          echo "$FILES" | base64 --decode > compressed.zip && \
+          unzip -qq compressed.zip && \
+          rm compressed.zip
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v3
+      - name: Copy docker compose configuration and environment secrets
+        uses: appleboy/scp-action@v0.1.1
         with:
-          images: ghcr.io/uclapi/enghub
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key_path: key.pem
+          source: "docker-compose.yml,.env"
+          target: "~/enghub"
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v2
+      - name: Docker compose build and up
+        uses: appleboy/ssh-action@v0.1.4
+        env:
+          ENVIRONMENT: staging
+          SHA: ${{ github.sha }}
         with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key_path: key.pem
+          envs: ENVIRONMENT,SHA
+          script_stop: true
+          script: |
+            cd ~/enghub/enghub && git fetch --all && git checkout $SHA
+            cd ~/enghub && docker-compose build && docker-compose up -d
+            docker image prune -a --filter "until=24h"
