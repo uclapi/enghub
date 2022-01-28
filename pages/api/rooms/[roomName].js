@@ -21,9 +21,12 @@ export default catchErrorsFrom(async (req, res) => {
     });
 
     if (existingRoomCount !== 1) {
-      return res
-        .status(404)
-        .json({ error: true, message: "The provided room does not exist" });
+      await prisma.enghub_rooms.create({
+        data: { name: req.query.roomName,
+                capacity: req.body.capacity,
+                active: false },
+      });
+      res.status(200).json({ error: false });
     }
 
     if (req.body?.capacity) {

@@ -3,11 +3,7 @@ import Head from "next/head";
 import { useState } from "react";
 import { Panel, Button, Form, Input, Loader, Message } from "rsuite";
 import LoginMessage from "../components/LoginMessage.react";
-import {
-  addAdmin,
-  updateRoomActiveState,
-  updateRoomCapacity,
-} from "../lib/api";
+import { addAdmin, updateRoomActiveState, updateRoomCapacity } from "../lib/api";
 import { pushSuccessToast } from "../lib/helpers";
 import styles from "../styles/Admin.module.css";
 import EditIcon from "@rsuite/icons/Edit";
@@ -23,13 +19,7 @@ const EditRooms = () => {
     const [value, setValue] = useState(room.capacity);
     return (
       <>
-        <Input
-          className={styles.tableEditInput}
-          value={value}
-          type="number"
-          min={1}
-          onChange={(v) => setValue(+v)}
-        />
+        <Input className={styles.tableEditInput} value={value} type="number" min={1} onChange={(v) => setValue(+v)} />
         <CheckOutlineIcon
           className={styles.icon}
           onClick={() => {
@@ -40,11 +30,43 @@ const EditRooms = () => {
             });
           }}
         />
-        <CloseOutlineIcon
-          className={styles.icon}
-          onClick={() => setEditingRoom(null)}
-        />
+        <CloseOutlineIcon className={styles.icon} onClick={() => setEditingRoom(null)} />
       </>
+    );
+  };
+
+  const CreateRoom = () => {
+    const [roomName, setRoomName] = useState("");
+    const [capacity, setCapacity] = useState(1);
+
+    return (
+      <tr>
+        <td>
+          <Input className={styles.tableEditInputName} maxLength={5} value={roomName} onChange={setRoomName} />
+        </td>
+        <td>
+          <Input
+            className={styles.tableEditInput}
+            value={capacity}
+            type="number"
+            min={1}
+            onChange={(v) => setCapacity(+v)}
+          />
+        </td>
+        <td>
+          <Button
+            appearance="default"
+            onClick={() =>
+              updateRoomCapacity(roomName, capacity).then(() => {
+                pushSuccessToast("Room created!");
+                mutate();
+              })
+            }
+          >
+            Create?
+          </Button>
+        </td>
+      </tr>
     );
   };
 
@@ -53,11 +75,7 @@ const EditRooms = () => {
       <EditCell room={room} />
     ) : (
       <>
-        {room.capacity}{" "}
-        <EditIcon
-          onClick={() => setEditingRoom({ room: room.name })}
-          className={styles.icon}
-        />
+        {room.capacity} <EditIcon onClick={() => setEditingRoom({ room: room.name })} className={styles.icon} />
       </>
     );
 
@@ -68,9 +86,8 @@ const EditRooms = () => {
         You can edit room capacities or mark rooms as inactive below.
         <br />
         <i>
-          Note: marking a room as inactive will <strong>not</strong> delete
-          existing bookings for this room, but will prevent new bookings from
-          being made.
+          Note: marking a room as inactive will <strong>not</strong> delete existing bookings for this room, but will
+          prevent new bookings from being made.
         </i>
       </p>
 
@@ -78,8 +95,7 @@ const EditRooms = () => {
 
       {isError && (
         <Message type="error" showIcon className="error-message">
-          There was an error loading the current rooms. Please try again later
-          or contact us if the error persists.
+          There was an error loading the current rooms. Please try again later or contact us if the error persists.
         </Message>
       )}
 
@@ -125,6 +141,7 @@ const EditRooms = () => {
               </td>
             </tr>
           ))}
+          <CreateRoom />
         </table>
       )}
     </>
@@ -137,18 +154,15 @@ const AddAdmins = () => {
     <>
       <h4>Manage Admins</h4>
       <p>
-        To add an administrator to the system, please enter their UCL email
-        address below. When they next login, they will be granted administrator
-        privileges:
+        To add an administrator to the system, please enter their UCL email address below. When they next login, they
+        will be granted administrator privileges:
       </p>
       <br />
       <Form
         layout="inline"
         onSubmit={() => {
           addAdmin(email).then(() =>
-            pushSuccessToast(
-              "Administrator added successfully! This will take effect when they next login."
-            )
+            pushSuccessToast("Administrator added successfully! This will take effect when they next login.")
           );
         }}
       >

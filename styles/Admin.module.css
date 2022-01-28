@@ -12,6 +12,12 @@
   display: inline;
 }
 
+.tableEditInputName {
+  width: 70px;
+  padding-right: 5px;
+  display: inline;
+}
+
 .icon {
   cursor: pointer;
   margin-left: 5px;
