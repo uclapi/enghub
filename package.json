@@ -5,7 +5,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "start:migrate" : "prisma migrate deploy && next start",
+    "startup": "node ./lib/startup.mjs",
+    "start:migrate" : "prisma migrate deploy && npm run startup && next start",
     "lint": "next lint",
     "postinstall": "prisma generate"
   },
