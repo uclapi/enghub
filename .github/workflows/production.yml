@@ -1,0 +1,54 @@
+name: "Deploy to Production"
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'git reference'     
+        required: true
+        default: 'master'
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: "${{ github.event.inputs.ref }}"
+
+      - name: Extract non-public secrets
+        env:
+          FILES: ${{ secrets.FILES }}
+        run: |
+          echo "$FILES" | base64 --decode > compressed.zip && \
+          unzip -qq compressed.zip && \
+          rm compressed.zip
+
+      - name: Copy docker compose configuration and environment secrets
+        uses: appleboy/scp-action@v0.1.1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key_path: key.pem
+          source: "docker-compose.yml,.env"
+          target: "~/enghub"
+
+      - name: Docker compose build and up
+        uses: appleboy/ssh-action@v0.1.4
+        env:
+          ENVIRONMENT: production
+          SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key_path: key.pem
+          envs: ENVIRONMENT,SHA
+          script_stop: true
+          script: |
+            cd ~/enghub/enghub && git fetch --all && git checkout $SHA
+            cd ~/enghub && docker-compose build && docker-compose up -d
+            docker image prune -a --filter "until=24h"
