@@ -6,13 +6,15 @@
     "build": "next build",
     "start": "next start",
     "startup": "node ./lib/startup.mjs",
-    "start:migrate" : "prisma migrate deploy && npm run startup && next start",
+    "start:migrate": "prisma migrate deploy && npm run startup && next start",
     "lint": "next lint",
     "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^3.7.0",
     "@rsuite/interactions": "^1.5.1",
+    "@sendgrid/mail": "^7.6.0",
+    "ics": "^2.35.0",
     "next": "12.0.7",
     "next-auth": "^4.1.0",
     "react": "17.0.2",

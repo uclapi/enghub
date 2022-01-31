@@ -11,6 +11,8 @@ import {
   getWeekStartAndEndFromDate,
 } from "../../../lib/helpers";
 import { catchErrorsFrom } from "../../../lib/serverHelpers";
+import sgMail from "@sendgrid/mail";
+import { createEvent } from "ics";
 
 export default catchErrorsFrom(async (req, res) => {
   const session = await getSession({ req });
@@ -134,6 +136,55 @@ export default catchErrorsFrom(async (req, res) => {
         room_name: req.body.room_name,
       },
     });
+
+    // Send an email to the user that their room has been booked
+    if (process.env.SENDGRID_SECRET && !session.user.isAdmin) {
+      try {
+        const event = {
+          start: [datetime.getFullYear(), datetime.getMonth() + 1, datetime.getDay() - 1, datetime.getHours(), 0],
+          duration: { hours: 1 },
+          title: "Enghub " + req.body.room_name,
+          description: "Booking confirmation number: " + "ABCDE",
+          location: "Engineering Hub " + req.body.room_name + ", UCL",
+          url: "https://enghub.io",
+          geo: { lat: 51.523859, lon: -0.131974 },
+          status: "CONFIRMED",
+          busyStatus: "BUSY",
+        };
+
+        const { value } = createEvent(event);
+
+        sgMail.setApiKey(process.env.SENDGRID_SECRET);
+        await sgMail.send({
+          to: session.user.email,
+          from: {
+            email: "rooms@enghub.io",
+            name: "Enghub"
+          },
+          templateId: "d-d02d6b45251f43b9867bfbe0324759b7",
+          dynamicTemplateData: {
+            first_name: session.user.name.split(" ")[0],
+            room: req.body.room_name,
+            time: new Intl.DateTimeFormat("en-GB", { timeStyle: "short" }).format(datetime),
+            date: new Intl.DateTimeFormat("en-GB").format(datetime),
+            date_long: new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(datetime),
+            time_long: new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: true, minute: "2-digit" }).format(datetime),
+            booking_number: "ABCDE",
+          },
+          attachments: [
+            {
+              content: Buffer.from(value).toString("base64"),
+              type: "application/ics",
+              name: "invite.ics",
+              filename: "invite.ics",
+              disposition: "attachment",
+            },
+          ],
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
 
     return res.status(200).json({ error: false, datetime: req.body.datetime });
   }
