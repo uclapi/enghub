@@ -96,3 +96,11 @@ nav ul li.right {
     padding-right: 0;
   }
 }
+
+/* Center modals */
+.rs-modal-wrapper {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 250px;
+}
