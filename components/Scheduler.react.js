@@ -191,7 +191,7 @@ export default function Scheduler({ session }) {
           <IconButton
             icon={<ArrowRightIcon />}
             onClick={() => setDate((oldDate) => addDaysToDate(oldDate, 1))}
-            disabled={addDaysToDate(date, 1) >= maxDate}
+            disabled={!session.user.isAdmin && addDaysToDate(date, 1) > maxDate}
           />
         </ButtonGroup>
       </div>
