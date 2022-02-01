@@ -19,7 +19,7 @@ export default catchErrorsFrom(async (req, res) => {
     const bookingExistsForUser = await prisma.enghub_bookings.findFirst({
       where: {
         email: { equals: session.user.email },
-        id: { equals: +req.query.bookingId },
+        id: { equals: req.query.bookingId },
       },
     });
 
@@ -38,7 +38,7 @@ export default catchErrorsFrom(async (req, res) => {
     }
 
     await prisma.enghub_bookings.delete({
-      where: { id: +req.query.bookingId },
+      where: { id: req.query.bookingId },
     });
 
     return res.status(200).json({ error: false });

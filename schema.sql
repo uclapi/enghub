@@ -11,7 +11,7 @@ CREATE TABLE enghub_rooms (
 );
 
 CREATE TABLE enghub_bookings (
-    id SERIAL PRIMARY KEY NOT NULL,
+    id VARCHAR(20) PRIMARY KEY NOT NULL,
     datetime TIMESTAMPTZ NOT NULL,
     room_name VARCHAR(5) NOT NULL REFERENCES enghub_rooms(name),
     email VARCHAR(100) NOT NULL REFERENCES enghub_users(email)

@@ -1,5 +1,7 @@
 import { getSession } from "next-auth/react";
 import {
+  BOOKING_ID_ALPHABET,
+  BOOKING_ID_LENGTH,
   BOOKING_LENGTH,
   MAX_DAYS_IN_ADVANCE_BOOKABLE,
   MAX_MINUTES_BOOKABLE_PER_WEEK,
@@ -13,6 +15,7 @@ import {
 import { catchErrorsFrom } from "../../../lib/serverHelpers";
 import sgMail from "@sendgrid/mail";
 import { createEvent } from "ics";
+import {customAlphabet} from 'nanoid';
 
 export default catchErrorsFrom(async (req, res) => {
   const session = await getSession({ req });
@@ -129,8 +132,11 @@ export default catchErrorsFrom(async (req, res) => {
       });
     }
 
+    const newBookingId = customAlphabet(BOOKING_ID_ALPHABET, BOOKING_ID_LENGTH)();
+    const shortBookingId = newBookingId.substring(0, 5);
     const query = await prisma.enghub_bookings.create({
       data: {
+        id: newBookingId,
         datetime,
         email: session.user.email,
         room_name: req.body.room_name,
@@ -143,9 +149,9 @@ export default catchErrorsFrom(async (req, res) => {
         const event = {
           start: [datetime.getFullYear(), datetime.getMonth() + 1, datetime.getDay() - 1, datetime.getHours(), 0],
           duration: { hours: 1 },
-          title: "Enghub " + req.body.room_name,
-          description: "Booking confirmation number: " + "ABCDE",
-          location: "Engineering Hub " + req.body.room_name + ", UCL",
+          title: `Enghub ${req.body.room_name}`,
+          description: `Booking confirmation number: ${shortBookingId}`,
+          location: `Engineering Hub ${req.body.room_name}, UCL`,
           url: "https://enghub.io",
           geo: { lat: 51.523859, lon: -0.131974 },
           status: "CONFIRMED",
@@ -169,7 +175,7 @@ export default catchErrorsFrom(async (req, res) => {
             date: new Intl.DateTimeFormat("en-GB").format(datetime),
             date_long: new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(datetime),
             time_long: new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: true, minute: "2-digit" }).format(datetime),
-            booking_number: "ABCDE",
+            booking_number: shortBookingId,
           },
           attachments: [
             {
@@ -182,7 +188,7 @@ export default catchErrorsFrom(async (req, res) => {
           ],
         });
       } catch (error) {
-        console.error(error);
+        console.error('Failed to send confirmation email', error);
       }
     }
 
