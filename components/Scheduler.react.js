@@ -42,25 +42,63 @@ export default function Scheduler({ session }) {
   const isError = isErrorBookings || isErrorRooms;
   const isLoading = isLoadingBookings || isLoadingRooms;
 
-  const renderBookedCell = (booking) => (
-    <td
-      className={`${styles.cell} ${
-        booking.isOwner ? styles.myBooking : styles.unavailable
-      }`}
-      onClick={async () => {
-        if (
-          booking.isOwner &&
-          (await confirmDialog("Are you sure you want to cancel this booking?"))
-        ) {
-          await cancelBooking(booking.id).then(() => {
-            pushSuccessToast("Booking cancelled successfully!");
-            mutate();
-          });
-        }
-      }}
+  const renderBookedCell = (booking, timestamp) => (
+    <Whisper
+      trigger="hover"
+      placement="right"
+      controlId={`control-id-${booking.datetime}-${booking.roomName}`}
+      enterable
+      speaker={
+        <Popover
+          title={
+            booking.fullName && session.user.isAdmin
+              ? "Details (admin-only)"
+              : "Details"
+          }
+        >
+          <p>
+            {session.user.isAdmin && (
+              <>
+                Booked by{" "}
+                <a
+                  href={`mailto:${
+                    booking.email
+                  }?subject=EngHub%20Room%20${booking.roomName}%20Booking%20(${timestamp.toUTCString()})`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {booking.fullName}
+                </a>
+                .
+                <br />
+              </>
+            )}
+            Booking ID: {booking.id.substring(0, 5)}.
+          </p>
+        </Popover>
+      }
     >
-      <span>Booked</span>
-    </td>
+      <td
+        className={`${styles.cell} ${
+          booking.isOwner ? styles.myBooking : styles.unavailable
+        }`}
+        onClick={async () => {
+          if (
+            booking.isOwner &&
+            (await confirmDialog(
+              "Are you sure you want to cancel this booking?"
+            ))
+          ) {
+            await cancelBooking(booking.id).then(() => {
+              pushSuccessToast("Booking cancelled successfully!");
+              mutate();
+            });
+          }
+        }}
+      >
+        <span>Booked</span>
+      </td>
+    </Whisper>
   );
 
   const renderCell = (date, time, roomName) => {
@@ -70,35 +108,7 @@ export default function Scheduler({ session }) {
     );
 
     if (booking) {
-      return booking.fullName ? (
-        <Whisper
-          trigger="hover"
-          placement="right"
-          controlId={`control-id-${booking.datetime}-${booking.roomName}`}
-          enterable
-          speaker={
-            <Popover title="Details (admin-only)">
-              <p>
-                Booked by{" "}
-                <a
-                  href={`mailto:${
-                    booking.email
-                  }?subject=EngHub%20Room%20${roomName}%20Booking%20(${timestamp.toUTCString()})`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {booking.fullName}
-                </a>
-                .
-              </p>
-            </Popover>
-          }
-        >
-          {renderBookedCell(booking)}
-        </Whisper>
-      ) : (
-        renderBookedCell(booking)
-      );
+      return renderBookedCell(booking, timestamp);
     }
 
     if (timestamp < getStartHourOfDate(new Date())) {
