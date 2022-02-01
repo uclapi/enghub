@@ -123,39 +123,41 @@ export default function Scheduler({ session }) {
   };
 
   const renderScheduleTable = () => (
-    <table className={styles.scheduler}>
-      <thead>
-        <tr>
-          <th className={styles.cell}>Time/Room</th>
-          {rooms.map(
-            (room) =>
-              room.active && (
-                <Whisper
-                  trigger="hover"
-                  placement="right"
-                  controlId={`room-title-${room.name}`}
-                  enterable
-                  speaker={
-                    <Popover title={`Capacity: ${room.capacity}`}></Popover>
-                  }
-                >
-                  <th className={styles.cell}>{room.name}</th>
-                </Whisper>
-              )
-          )}
-        </tr>
-      </thead>
-      <tbody>
-        {SLOTS.map((time) => (
+    <div className={styles.schedulerWrapper}>
+      <table className={styles.scheduler}>
+        <thead>
           <tr>
-            <th className={styles.cell}>{time}</th>
+            <th className={`${styles.cell} ${styles.stickyCell}`}>Time/Room</th>
             {rooms.map(
-              (room) => room.active && renderCell(date, time, room.name)
+              (room) =>
+                room.active && (
+                  <Whisper
+                    trigger="hover"
+                    placement="right"
+                    controlId={`room-title-${room.name}`}
+                    enterable
+                    speaker={
+                      <Popover title={`Capacity: ${room.capacity}`}></Popover>
+                    }
+                  >
+                    <th className={styles.cell}>{room.name}</th>
+                  </Whisper>
+                )
             )}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {SLOTS.map((time) => (
+            <tr>
+              <th className={`${styles.cell} ${styles.stickyCell}`}>{time}</th>
+              {rooms.map(
+                (room) => room.active && renderCell(date, time, room.name)
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 
   const renderDateControls = () => {

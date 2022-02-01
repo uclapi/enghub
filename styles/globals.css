@@ -30,7 +30,6 @@ footer {
   width: 80%;
   font-size: 1.2em;
   text-align: center;
-  overflow-x: auto;
 }
 
 nav {
@@ -83,12 +82,8 @@ nav ul li.right {
   }
 
   .card {
-    margin: 1em auto;
-    background-color: #fff;
     width: 95%;
     font-size: 1.1em;
-    text-align: center;
-    overflow-x: auto;
   }
 
   .rs-panel-body {

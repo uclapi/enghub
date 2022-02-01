@@ -1,7 +1,10 @@
+.schedulerWrapper {
+  overflow-x: auto;
+}
+
 .scheduler {
   margin: auto;
   width: 450px;
-  table-layout: fixed;
   border: 1px solid lightgrey;
 }
 
@@ -16,6 +19,13 @@
 .cell {
   padding: 10px;
   width: 50px;
+}
+
+.stickyCell {
+  position: sticky;
+  left: 0;
+  background-color: #fff;
+  z-index: 1;
 }
 
 @media (max-width: 575.98px) {
@@ -46,7 +56,7 @@
 }
 
 .myBooking:hover:before {
-  content: 'Cancel?';
+  content: "Cancel?";
 }
 
 .unavailable {
