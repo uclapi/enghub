@@ -180,12 +180,12 @@ export default function Scheduler({ session }) {
         <DatePicker
           placeholder="Go to date"
           onChange={(date) => {
-            const newDate = date == null ? new Date() : date;
-            newDate.setHours(0, 0, 0);
+            const newDate = date == null ? getToday() : date;
+            newDate.setHours(0, 0, 0, 0);
             setDate(newDate);
           }}
           disabledDate={(date) =>
-            date < minDate || (!session.user.isAdmin && date > maxDate)
+            (!session.user.isAdmin && (date < minDate || date > maxDate))
           }
           ranges={[
             { label: "today", value: new Date() },
@@ -198,7 +198,7 @@ export default function Scheduler({ session }) {
           <IconButton
             icon={<ArrowLeftIcon />}
             onClick={() => setDate((oldDate) => addDaysToDate(oldDate, -1))}
-            disabled={date <= minDate}
+            disabled={!session.user.isAdmin && date <= minDate}
           />
           <IconButton
             icon={<ArrowRightIcon />}

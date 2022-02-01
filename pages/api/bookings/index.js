@@ -10,6 +10,7 @@ import { prisma } from "../../../lib/db";
 import {
   addDaysToDate,
   getStartHourOfDate,
+  getToday,
   getWeekStartAndEndFromDate,
 } from "../../../lib/helpers";
 import { catchErrorsFrom } from "../../../lib/serverHelpers";
@@ -30,10 +31,22 @@ export default catchErrorsFrom(async (req, res) => {
         .json({ error: true, message: "You did not provide a date filter." });
     }
 
+    const today = getToday();
     const start = new Date(req.query.date);
-    start.setUTCHours(0, 0, 0, 0);
     const end = new Date(start);
+    start.setUTCHours(0, 0, 0, 0);
     end.setUTCHours(23, 59, 59, 999);
+
+    if (
+      !session.user.isAdmin &&
+      (start < today ||
+        end > addDaysToDate(today, MAX_DAYS_IN_ADVANCE_BOOKABLE))
+    ) {
+      return res.status(403).json({
+        error: true,
+        message: "You do not have permission to view bookings for this day.",
+      });
+    }
 
     const bookings = await prisma.enghub_bookings.findMany({
       where: { datetime: { gte: start, lte: end } },
