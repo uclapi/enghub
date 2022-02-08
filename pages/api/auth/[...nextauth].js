@@ -11,6 +11,11 @@ const makeUserInfoRequest = async (context) =>
     `${context.provider.userinfo.url}?client_secret=${context.client.client_secret}&token=${context.tokens.access_token}`
   ).then((res) => res.json());
 
+/**
+ * NextAuth.js configuration. See https://next-auth.js.org/configuration/initialization for details.
+ * We use a custom OAuth provider to point NextAuth.js towards UCL API's OAuth system.
+ * We also use NextAuth.js callbacks to ensure only Engineering users can login, and to grant admin privileges.
+ */
 export default NextAuth({
   providers: [
     {
@@ -47,12 +52,16 @@ export default NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     session: async ({ session, token }) => {
+      // Called on every request to get the session
+      // Adds the isAdmin flag to the session.user object
       if (token?.sub != null && session?.user != null) {
         session.user.isAdmin = token.isAdmin;
       }
       return session;
     },
     jwt: async ({ token }) => {
+      // Called when a JWT is created (on sign in) or updated
+      // Checks to see if the user should have admin privileges based on our db
       const isAdmin =
         (await prisma.enghub_users.findFirst({
           where: { email: { equals: token.email }, is_admin: { equals: true } },
@@ -62,12 +71,13 @@ export default NextAuth({
       return token;
     },
     signIn: async ({ profile }) => {
+      // Called on sign in attempt to return true/false if user allowed to sign in
       // Only Engineering students are allowed to book rooms in EngHub
       if (profile.ucl_groups.indexOf("engscifac-all") > -1) {
         return true;
       }
 
-      // Admins may be non-Engineering
+      // But admins may be non-Engineering
       const usersCount = await prisma.enghub_users.count({
         where: { email: { equals: profile.email }, is_admin: { equals: true } },
       });
@@ -77,6 +87,9 @@ export default NextAuth({
   },
   events: {
     signIn: async (message) => {
+      // Fired on successful logins
+      // Make sure our database is up to date with this user's details
+      // If they don't exist, add them
       await prisma.enghub_users.upsert({
         where: { email: message.user.email },
         update: { full_name: message.user.name },
