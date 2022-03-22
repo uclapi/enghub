@@ -43,9 +43,7 @@ export default function Home() {
         </i>
 
         <h3>Opening Times</h3>
-        Mon - Fri: 08:00 - 22:00
-        <br />
-        Sat - Sun: 09:00 - 19:00
+        Mon - Fri: 08:00 - 20:00
 
         <h3>Map</h3>
         <iframe

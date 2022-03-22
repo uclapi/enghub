@@ -11,10 +11,15 @@ import {
   Whisper,
 } from "rsuite";
 import { book, cancelBooking } from "../lib/api";
-import { MAX_DAYS_IN_ADVANCE_BOOKABLE, SLOTS } from "../lib/constants";
+import {
+  MAX_DAYS_IN_ADVANCE_BOOKABLE,
+  WEEKDAY_SLOTS,
+  WEEKEND_SLOTS
+} from "../lib/constants";
 import {
   addDaysToDate,
   getStartHourOfDate,
+  getShortDateString,
   getDateString,
   confirmDialog,
   pushSuccessToast,
@@ -31,7 +36,7 @@ export default function Scheduler({ session }) {
     isLoading: isLoadingBookings,
     isError: isErrorBookings,
     mutate,
-  } = useBookings(date.toISOString().substring(0, 10));
+  } = useBookings(getShortDateString(date));
 
   const {
     rooms,
@@ -41,6 +46,8 @@ export default function Scheduler({ session }) {
 
   const isError = isErrorBookings || isErrorRooms;
   const isLoading = isLoadingBookings || isLoadingRooms;
+
+  const slots = date.getDay() == 6 || date.getDay() == 0 ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
 
   const renderBookedCell = (booking, timestamp) => (
     <Whisper
@@ -157,7 +164,7 @@ export default function Scheduler({ session }) {
           </tr>
         </thead>
         <tbody>
-          {SLOTS.map((time) => (
+          {slots.map((time) => (
             <tr>
               <th className={`${styles.cell} ${styles.stickyCell}`}>{time}</th>
               {rooms.map(
@@ -185,11 +192,11 @@ export default function Scheduler({ session }) {
             setDate(newDate);
           }}
           disabledDate={(date) =>
-            (!session.user.isAdmin && (date < minDate || date > maxDate))
+            (!session.user.isAdmin && (date < minDate || date > maxDate) || date.getDay() % 6 == 0)
           }
           ranges={[
             { label: "today", value: new Date() },
-            { label: "Tomorrow", value: (date) => addDaysToDate(date, 1) },
+            { label: "Tomorrow", value: (date) => addDaysToDate(date, 1, true) },
           ]}
           oneTap
         />
@@ -197,12 +204,12 @@ export default function Scheduler({ session }) {
         <ButtonGroup className={styles.dateArrows}>
           <IconButton
             icon={<ArrowLeftIcon />}
-            onClick={() => setDate((oldDate) => addDaysToDate(oldDate, -1))}
+            onClick={() => setDate((oldDate) => addDaysToDate(oldDate, -1, true))}
             disabled={!session.user.isAdmin && date <= minDate}
           />
           <IconButton
             icon={<ArrowRightIcon />}
-            onClick={() => setDate((oldDate) => addDaysToDate(oldDate, 1))}
+            onClick={() => setDate((oldDate) => addDaysToDate(oldDate, 1, true))}
             disabled={!session.user.isAdmin && addDaysToDate(date, 1) > maxDate}
           />
         </ButtonGroup>

@@ -5,6 +5,8 @@ import {
   BOOKING_LENGTH,
   MAX_DAYS_IN_ADVANCE_BOOKABLE,
   MAX_MINUTES_BOOKABLE_PER_WEEK,
+  WEEKDAY_SLOTS,
+  WEEKEND_SLOTS,
 } from "../../../lib/constants";
 import { prisma } from "../../../lib/db";
 import {
@@ -89,6 +91,14 @@ export default catchErrorsFrom(async (req, res) => {
       return res.status(422).json({
         error: true,
         message: "You cannot book a room in the past",
+      });
+    }
+
+    const slots = datetime.getDay() % 6 == 0 ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
+    if (slots.indexOf(datetime.toTimeString().substr(0,5)) == -1) {
+      return res.status(422).json({
+        error: true,
+        message: "You did not provide a valid date/time for the booking"
       });
     }
 
