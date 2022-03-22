@@ -26,7 +26,7 @@ export default catchErrorsFrom(async (req, res) => {
                 capacity: req.body.capacity,
                 active: false },
       });
-      res.status(200).json({ error: false });
+      return res.status(200).json({ error: false });
     }
 
     if (req.body?.capacity) {

@@ -16,7 +16,7 @@ import {
 import { catchErrorsFrom } from "../../../lib/serverHelpers";
 import sgMail from "@sendgrid/mail";
 import { createEvent } from "ics";
-import {customAlphabet} from 'nanoid';
+import { customAlphabet } from 'nanoid';
 
 export default catchErrorsFrom(async (req, res) => {
   const session = await getSession({ req });

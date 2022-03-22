@@ -17,7 +17,7 @@ export default catchErrorsFrom(async (req, res) => {
       });
     }
 
-    if (!req.body.email && !req.body.email.endWith("@ucl.ac.uk")) {
+    if (!req.body.email || !req.body.email.endsWith("@ucl.ac.uk")) {
       return res.status(422).json({
         error: true,
         message: "You did not provide a valid UCL email address.",
