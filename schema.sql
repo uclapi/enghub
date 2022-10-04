@@ -7,7 +7,8 @@ CREATE TABLE enghub_users (
 CREATE TABLE enghub_rooms (
     name VARCHAR(6) PRIMARY KEY NOT NULL,
     capacity INTEGER NOT NULL,
-    active BOOLEAN DEFAULT TRUE NOT NULL
+    active BOOLEAN DEFAULT TRUE NOT NULL,
+    admin_only BOOLEAN DEFAULT FALSE NOT NULL
 );
 
 CREATE TABLE enghub_bookings (

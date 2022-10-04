@@ -18,6 +18,9 @@ export default catchErrorsFrom(async (req, res) => {
         orderBy: { name: "desc" },
       });
 
+    // Return active rooms followed by admin-only rooms followed by inactive rooms
+    rooms.sort((a, b) => (a.admin_only - b.admin_only) - (a.active - b.active));
+
     return res.status(200).json({ rooms });
   }
 });

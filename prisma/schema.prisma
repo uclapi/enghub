@@ -20,6 +20,7 @@ model enghub_rooms {
   name            String            @id @db.VarChar(6)
   capacity        Int
   active          Boolean           @default(true)
+  admin_only      Boolean           @default(false)
   enghub_bookings enghub_bookings[]
 }
 

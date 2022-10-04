@@ -102,6 +102,24 @@ export default catchErrorsFrom(async (req, res) => {
       });
     }
 
+    const room = await prisma.enghub_rooms.findFirst({
+      where: { name: req.body.room_name }
+    });
+
+    if (!room) {
+      return res.status(422).json({
+        error: true,
+        message: 'You provided an invalid room',
+      });
+    }
+
+    if (room.admin_only && !session.user.isAdmin) {
+      return res.status(403).json({
+        error: true,
+        message: 'Only admins can book this room',
+      });
+    }
+
     const existingBookingsCount = await prisma.enghub_bookings.count({
       where: {
         datetime,

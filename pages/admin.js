@@ -3,8 +3,8 @@ import Head from "next/head";
 import { useState } from "react";
 import { Panel, Button, Form, Input, Loader, Message } from "rsuite";
 import LoginMessage from "../components/LoginMessage.react";
-import { addAdmin, updateRoomActiveState, updateRoomCapacity } from "../lib/api";
-import { pushSuccessToast } from "../lib/helpers";
+import { addAdmin, updateRoom } from "../lib/api";
+import { pushErrorToast, pushSuccessToast } from "../lib/helpers";
 import styles from "../styles/Admin.module.css";
 import EditIcon from "@rsuite/icons/Edit";
 import CheckOutlineIcon from "@rsuite/icons/CheckOutline";
@@ -23,7 +23,7 @@ const EditRooms = () => {
         <CheckOutlineIcon
           className={styles.icon}
           onClick={() => {
-            updateRoomCapacity(room.name, value).then(() => {
+            updateRoom(room.name, { capacity: value }).then(() => {
               setEditingRoom(null);
               mutate();
               pushSuccessToast("Room capacity updated successfully!");
@@ -38,6 +38,7 @@ const EditRooms = () => {
   const CreateRoom = () => {
     const [roomName, setRoomName] = useState("");
     const [capacity, setCapacity] = useState(1);
+    const [adminOnly, setAdminOnly] = useState(false);
 
     return (
       <tr>
@@ -54,14 +55,27 @@ const EditRooms = () => {
           />
         </td>
         <td>
+          <Input
+            className={styles.tableEditInput}
+            value={adminOnly}
+            type="checkbox"
+            onChange={(_, e) => setAdminOnly(e.target.checked)}
+          />
+        </td>
+        <td>
           <Button
             appearance="default"
-            onClick={() =>
-              updateRoomCapacity(roomName, capacity).then(() => {
+            onClick={() => {
+              if (!roomName || !capacity) {
+                pushErrorToast('Please provide a room name and capacity');
+                return;
+              }
+
+              updateRoom(roomName, { capacity, adminOnly }).then(() => {
                 pushSuccessToast("Room created!");
                 mutate();
               })
-            }
+            }}
           >
             Create?
           </Button>
@@ -83,11 +97,12 @@ const EditRooms = () => {
     <>
       <h4>Manage Rooms</h4>
       <p>
-        You can edit room capacities or mark rooms as inactive below.
+        You can add rooms, edit their capacities, mark them as inactive, or restrict bookings to admins only below.
         <br />
         <i>
-          Note: marking a room as inactive will <strong>not</strong> delete existing bookings for this room, but will
-          prevent new bookings from being made.
+          Note: marking a room as inactive or as admin-only will <strong>not</strong> delete
+          existing bookings for this room, but will prevent new bookings from
+          being made.
         </i>
       </p>
 
@@ -95,7 +110,8 @@ const EditRooms = () => {
 
       {isError && (
         <Message type="error" showIcon className="error-message">
-          There was an error loading the current rooms. Please try again later or contact us if the error persists.
+          There was an error loading the current rooms. Please try again later
+          or contact us if the error persists.
         </Message>
       )}
 
@@ -104,40 +120,28 @@ const EditRooms = () => {
           <tr>
             <th>Room Name</th>
             <th>Capacity</th>
-            <th>Action</th>
+            <th>Admin-only?</th>
+            <th>Active?</th>
           </tr>
           {rooms.map((room) => (
             <tr>
               <td>{room.name}</td>
               <td>{renderCapacityCell(room)}</td>
               <td>
-                {room.active ? (
-                  <Button
-                    appearance="primary"
-                    color="red"
-                    onClick={() =>
-                      updateRoomActiveState(room.name, false).then(() => {
-                        pushSuccessToast("Room marked as inactive!");
-                        mutate();
-                      })
-                    }
-                  >
-                    Mark as inactive?
-                  </Button>
-                ) : (
-                  <Button
-                    appearance="primary"
-                    color="green"
-                    onClick={() =>
-                      updateRoomActiveState(room.name, true).then(() => {
-                        pushSuccessToast("Room marked as active!");
-                        mutate();
-                      })
-                    }
-                  >
-                    Mark as active?
-                  </Button>
-                )}
+                <input type='checkbox' checked={room.admin_only} onChange={(e) => {
+                  updateRoom(room.name, { adminOnly: e.target.checked }).then(() => {
+                    pushSuccessToast("Room bookable status updated!");
+                    mutate();
+                  });
+                }} />
+              </td>
+              <td>
+                <input type='checkbox' checked={room.active} onChange={(e) => {
+                  updateRoom(room.name, { active: e.target.checked }).then(() => {
+                    pushSuccessToast("Room active status updated!");
+                    mutate();
+                  });
+                }} />
               </td>
             </tr>
           ))}
@@ -194,7 +198,7 @@ export default function Admin({ session }) {
       </Head>
 
       <Panel header={<h2>Administration</h2>} bordered className="card">
-        {session ? (
+        {session?.user?.isAdmin ? (
           <>
             <AddAdmins />
             <EditRooms />
