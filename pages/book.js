@@ -17,7 +17,8 @@ export default function Book({ session }) {
       </Head>
 
       <Modal
-        full
+        size='full'
+        style={{height: "80%"}}
         open={showRoomLayout}
         onClose={() => setShowRoomLayout(false)}
       >
