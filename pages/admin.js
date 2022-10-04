@@ -198,7 +198,7 @@ export default function Admin({ session }) {
       </Head>
 
       <Panel header={<h2>Administration</h2>} bordered className="card">
-        {session ? (
+        {session?.user?.isAdmin ? (
           <>
             <AddAdmins />
             <EditRooms />
