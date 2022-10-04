@@ -22,9 +22,12 @@ export default catchErrorsFrom(async (req, res) => {
 
     if (existingRoomCount !== 1) {
       await prisma.enghub_rooms.create({
-        data: { name: req.query.roomName,
-                capacity: req.body.capacity,
-                active: false },
+        data: {
+          name: req.query.roomName,
+          capacity: req.body.capacity,
+          admin_only: req.body.admin_only,
+          active: false
+        },
       });
       res.status(200).json({ error: false });
     }
@@ -47,6 +50,13 @@ export default catchErrorsFrom(async (req, res) => {
       await prisma.enghub_rooms.update({
         where: { name: req.query.roomName },
         data: { active: req.body.active },
+      });
+    }
+
+    if (typeof req.body?.admin_only !== 'undefined') {
+      await prisma.enghub_rooms.update({
+        where: { name: req.query.roomName },
+        data: { admin_only: req.body.admin_only },
       });
     }
 

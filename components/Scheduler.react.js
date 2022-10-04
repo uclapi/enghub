@@ -49,6 +49,9 @@ export default function Scheduler({ session }) {
 
   const slots = date.getDay() == 6 || date.getDay() == 0 ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
 
+  const isUserAllowedToBookRoom = (room) =>
+    !(room.admin_only && !session.user.isAdmin);
+
   const renderBookedCell = (booking, timestamp) => (
     <Whisper
       trigger="hover"
@@ -108,9 +111,9 @@ export default function Scheduler({ session }) {
     </Whisper>
   );
 
-  const renderCell = (date, time, roomName) => {
+  const renderCell = (date, time, room) => {
     const timestamp = getTimestamp(date, time);
-    const booking = bookings?.[roomName]?.find(
+    const booking = bookings?.[room.name]?.find(
       (b) => b.datetime === timestamp.toISOString()
     );
 
@@ -124,10 +127,13 @@ export default function Scheduler({ session }) {
 
     return (
       <td
-        className={`${styles.cell} ${styles.available}`}
+        className={`${styles.cell} ${styles.available} ${!isUserAllowedToBookRoom(room) ? styles.disabled : ""}`}
         onClick={async () => {
-          if (await confirmDialog("Are you sure you want to book this slot?")) {
-            await book(timestamp, roomName).then(() => {
+          if (
+            isUserAllowedToBookRoom(room) &&
+            (await confirmDialog("Are you sure you want to book this slot?"))
+          ) {
+            await book(timestamp, room.name).then(() => {
               pushSuccessToast("Room booked successfully!");
               mutate();
             });
@@ -154,10 +160,11 @@ export default function Scheduler({ session }) {
                     controlId={`room-title-${room.name}`}
                     enterable
                     speaker={
-                      <Popover title={`Capacity: ${room.capacity}`}></Popover>
+                      <Popover
+                        title={`Capacity: ${room.capacity} ${room.admin_only ? '(only admins can book this room)' : ''}`} />
                     }
                   >
-                    <th className={styles.cell}>{room.name}</th>
+                    <th className={`${styles.cell} ${!isUserAllowedToBookRoom(room) ? styles.disabled : ''}`}>{room.name}</th>
                   </Whisper>
                 )
             )}
@@ -168,7 +175,7 @@ export default function Scheduler({ session }) {
             <tr>
               <th className={`${styles.cell} ${styles.stickyCell}`}>{time}</th>
               {rooms.map(
-                (room) => room.active && renderCell(date, time, room.name)
+                (room) => room.active && renderCell(date, time, room)
               )}
             </tr>
           ))}
