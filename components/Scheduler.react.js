@@ -52,7 +52,7 @@ export default function Scheduler({ session }) {
   const renderBookedCell = (booking, timestamp) => (
     <Whisper
       trigger="hover"
-      placement="right"
+      placement="left"
       controlId={`control-id-${booking.datetime}-${booking.roomName}`}
       enterable
       speaker={
@@ -150,7 +150,7 @@ export default function Scheduler({ session }) {
                 room.active && (
                   <Whisper
                     trigger="hover"
-                    placement="right"
+                    placement="left"
                     controlId={`room-title-${room.name}`}
                     enterable
                     speaker={
