@@ -212,10 +212,10 @@ export default catchErrorsFrom(async (req, res) => {
           dynamicTemplateData: {
             first_name: session.user.name.split(" ")[0],
             room: req.body.room_name,
-            time: new Intl.DateTimeFormat("en-GB", { timeStyle: "short" }).format(datetime),
-            date: new Intl.DateTimeFormat("en-GB").format(datetime),
-            date_long: new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(datetime),
-            time_long: new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: true, minute: "2-digit" }).format(datetime),
+            time: new Intl.DateTimeFormat("en-GB", { timeStyle: "short", timeZone: 'Europe/London' }).format(datetime),
+            date: new Intl.DateTimeFormat("en-GB", { timeZone: 'Europe/London' }).format(datetime),
+            date_long: new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeZone: 'Europe/London' }).format(datetime),
+            time_long: new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: true, minute: "2-digit", timeZone: 'Europe/London' }).format(datetime),
             booking_number: shortBookingId,
           },
           attachments: [
