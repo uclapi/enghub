@@ -1,0 +1,54 @@
+.roomList {
+  margin: 10px;
+  display: grid;
+  column-gap: 15px;
+  row-gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-rows: repeat(auto-fit minmax(100px, 1fr));
+}
+
+.room {
+  border: 2px solid lightgrey;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.roomName {
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.roomDetails {
+  font-size: 0.8em;
+}
+
+.active {
+  border-color: green;
+}
+
+.inactive {
+  border-color: red;
+}
+
+.adminOnly {
+  border-color: orange;
+}
+
+.userWhitelist {
+  margin: 5px;
+}
+
+.userWhitelistItem {
+  margin-bottom: 15px;
+}
+
+.editInput {
+  width: 50%;
+  display: inline;
+  margin-right: 5px;
+}
+
+.icon {
+  margin-right: 5px;
+  font-size: 1.2em;
+}

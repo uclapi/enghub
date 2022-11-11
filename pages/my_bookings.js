@@ -29,8 +29,8 @@ export default function MyBookings({ session }) {
 
   const renderFutureBooking = (booking) => (
     <>
-      {getDateTimeString(new Date(booking.datetime))} - Room {booking.room_name}
-      .{" "}
+      {getDateTimeString(new Date(booking.datetime))} - Room {booking.room_name}{" "}
+      ({booking.building_name}){" "}
       <Button
         color="red"
         appearance="ghost"
@@ -50,8 +50,8 @@ export default function MyBookings({ session }) {
 
   const renderPastBooking = (booking) => (
     <>
-      {getDateTimeString(new Date(booking.datetime))} - Room {booking.room_name}
-      .
+      {getDateTimeString(new Date(booking.datetime))} - Room {booking.room_name}{" "}
+      ({booking.building_name})
     </>
   );
 

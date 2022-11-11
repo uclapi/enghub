@@ -10,18 +10,25 @@ datasource db {
 model enghub_bookings {
   id           String       @id @db.VarChar(20)
   datetime     DateTime     @db.Timestamptz(6)
-  room_name    String       @db.VarChar(5)
+  room_id      Int
   email        String       @db.VarChar(100)
   enghub_users enghub_users @relation(fields: [email], references: [email], onDelete: NoAction, onUpdate: NoAction)
-  enghub_rooms enghub_rooms @relation(fields: [room_name], references: [name], onDelete: NoAction, onUpdate: NoAction)
+  enghub_rooms enghub_rooms @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "enghub_bookings_room_name_fkey")
 }
 
 model enghub_rooms {
-  name            String            @id @db.VarChar(6)
-  capacity        Int
-  active          Boolean           @default(true)
-  admin_only      Boolean           @default(false)
-  enghub_bookings enghub_bookings[]
+  name                        String                        @db.VarChar(6)
+  capacity                    Int
+  active                      Boolean                       @default(true)
+  admin_only                  Boolean                       @default(false)
+  description                 String?                       @db.VarChar(200)
+  building_id                 Int
+  restricted_to_group         String?                       @db.VarChar(20)
+  book_by_seat                Boolean                       @default(true)
+  id                          Int                           @id @default(autoincrement())
+  enghub_buildings            enghub_buildings              @relation(fields: [building_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  enghub_bookings             enghub_bookings[]
+  enghub_rooms_user_whitelist enghub_rooms_user_whitelist[]
 }
 
 model enghub_users {
@@ -29,4 +36,18 @@ model enghub_users {
   full_name       String            @db.VarChar(100)
   is_admin        Boolean           @default(false)
   enghub_bookings enghub_bookings[]
+}
+
+model enghub_buildings {
+  id           Int            @id @default(autoincrement())
+  name         String         @db.VarChar(50)
+  enghub_rooms enghub_rooms[]
+}
+
+model enghub_rooms_user_whitelist {
+  email        String       @db.VarChar(100)
+  room_id      Int
+  enghub_rooms enghub_rooms @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([email, room_id])
 }
