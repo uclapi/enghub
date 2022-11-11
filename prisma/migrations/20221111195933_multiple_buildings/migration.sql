@@ -10,18 +10,23 @@
 -- DropForeignKey
 ALTER TABLE "enghub_bookings" DROP CONSTRAINT "enghub_bookings_room_name_fkey";
 
--- AlterTable
-ALTER TABLE "enghub_bookings" DROP COLUMN "room_name",
-ADD COLUMN     "room_id" INTEGER NOT NULL;
+-- Manual edits
+ALTER TABLE "enghub_bookings" ADD COLUMN "room_id" INTEGER;
 
 -- AlterTable
 ALTER TABLE "enghub_rooms" DROP CONSTRAINT "enghub_rooms_pkey",
 ADD COLUMN     "book_by_seat" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "building_id" INTEGER NOT NULL,
+ADD COLUMN     "building_id" INTEGER,
 ADD COLUMN     "description" VARCHAR(200),
 ADD COLUMN     "id" SERIAL NOT NULL,
 ADD COLUMN     "restricted_to_group" VARCHAR(20),
 ADD CONSTRAINT "enghub_rooms_pkey" PRIMARY KEY ("id");
+
+-- Manual edits
+UPDATE "enghub_bookings" B SET room_id = (SELECT id FROM "enghub_rooms" WHERE name = B.room_name);
+
+-- AlterTable
+ALTER TABLE "enghub_bookings" DROP COLUMN "room_name";
 
 -- CreateTable
 CREATE TABLE "enghub_buildings" (
@@ -30,6 +35,10 @@ CREATE TABLE "enghub_buildings" (
 
     CONSTRAINT "enghub_buildings_pkey" PRIMARY KEY ("id")
 );
+
+-- Manual edits
+INSERT INTO "enghub_buildings" (id, name) VALUES (1, 'Henry Morley Building');
+UPDATE "enghub_rooms" SET building_id = 1;
 
 -- CreateTable
 CREATE TABLE "enghub_rooms_user_whitelist" (
@@ -47,3 +56,7 @@ ALTER TABLE "enghub_rooms" ADD CONSTRAINT "enghub_rooms_building_id_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "enghub_rooms_user_whitelist" ADD CONSTRAINT "enghub_rooms_user_whitelist_room_id_fkey" FOREIGN KEY ("room_id") REFERENCES "enghub_rooms"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- Manual edits
+ALTER TABLE "enghub_bookings" ALTER COLUMN "room_id" SET NOT NULL;
+ALTER TABLE "enghub_rooms" ALTER COLUMN "building_id" SET NOT NULL;
