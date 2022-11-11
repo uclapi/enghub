@@ -39,6 +39,8 @@ CREATE TABLE "enghub_buildings" (
 -- Manual edits
 INSERT INTO "enghub_buildings" (id, name) VALUES (1, 'Henry Morley Building');
 UPDATE "enghub_rooms" SET building_id = 1;
+UPDATE "enghub_rooms" SET book_by_seat = 'f';
+UPDATE "enghub_rooms" SET restricted_to_group = 'engscifac-all';
 
 -- CreateTable
 CREATE TABLE "enghub_rooms_user_whitelist" (
