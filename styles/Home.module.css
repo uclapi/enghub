@@ -19,11 +19,18 @@
   background-color: #fff;
   width: 80%;
   font-size: 1.3em;
-  text-align: center;
 }
 
 .map {
+  margin: 15px 0px;
   border: 0;
   width: 100%;
   height: 250px;
+}
+
+.locations {
+  display: grid;
+  column-gap: 15px;
+  row-gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
 }

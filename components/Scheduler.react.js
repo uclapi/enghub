@@ -53,14 +53,77 @@ export default function Scheduler({ buildingId, session }) {
   const isUserAllowedToBookRoom = (room) =>
     !(room.admin_only && !session.user.isAdmin);
 
-  const renderBookedCell = (slotBookings, timestamp) => {
+  const renderCell = (date, time, room) => {
+    const timestamp = getTimestamp(date, time);
+    const slotBookings =
+      bookings?.[room.id]?.filter(
+        (b) => b.datetime === timestamp.toISOString()
+      ) ?? [];
+
+    if (!slotBookings.length && timestamp < getStartHourOfDate(new Date())) {
+      return <td className={styles.unavailable}>-</td>;
+    }
+
     const slotBookedByLoggedInUser = slotBookings.find((b) => b.isOwner);
+    const renderBody = () => {
+      if (slotBookedByLoggedInUser) {
+        return (
+          <td
+            className={`${styles.cell} ${
+              slotBookedByLoggedInUser ? styles.myBooking : styles.unavailable
+            }`}
+            onClick={async () => {
+              if (
+                await confirmDialog(
+                  "Are you sure you want to cancel this booking?"
+                )
+              ) {
+                await cancelBooking(slotBookedByLoggedInUser.id).then(() => {
+                  pushSuccessToast("Booking cancelled successfully!");
+                  mutate();
+                });
+              }
+            }}
+          >
+            <span>Booked</span>
+          </td>
+        );
+      } else {
+        return (
+          <td
+            className={`${styles.cell} ${styles.available} ${
+              !isUserAllowedToBookRoom(room) ? styles.disabled : ""
+            }`}
+            onClick={async () => {
+              if (
+                isUserAllowedToBookRoom(room) &&
+                (await confirmDialog(
+                  "Are you sure you want to book this slot?"
+                ))
+              ) {
+                await book(timestamp, room.id).then(() => {
+                  pushSuccessToast("Room booked successfully!");
+                  mutate();
+                });
+              }
+            }}
+          >
+            Book?{" "}
+            {room.book_by_seat
+              ? `(available: ${room.capacity - slotBookings.length}/${
+                  room.capacity
+                })`
+              : ""}
+          </td>
+        );
+      }
+    };
 
     return (
       <Whisper
-        trigger="hover"
+        trigger={slotBookings.length ? "hover" : "none"}
         placement="left"
-        controlId={`control-id-${slotBookings[0].datetime}-${slotBookings[0].roomName}`}
+        controlId={`control-id-${date}-${room}`}
         enterable
         speaker={
           <Popover
@@ -93,73 +156,8 @@ export default function Scheduler({ buildingId, session }) {
           </Popover>
         }
       >
-        <td
-          className={`${styles.cell} ${
-            slotBookedByLoggedInUser ? styles.myBooking : styles.unavailable
-          }`}
-          onClick={async () => {
-            if (
-              slotBookedByLoggedInUser &&
-              (await confirmDialog(
-                "Are you sure you want to cancel this booking?"
-              ))
-            ) {
-              await cancelBooking(slotBookedByLoggedInUser.id).then(() => {
-                pushSuccessToast("Booking cancelled successfully!");
-                mutate();
-              });
-            }
-          }}
-        >
-          <span>Booked</span>
-        </td>
+        {renderBody()}
       </Whisper>
-    );
-  };
-
-  const renderCell = (date, time, room) => {
-    const timestamp = getTimestamp(date, time);
-    const slotBookings =
-      bookings?.[room.id]?.filter(
-        (b) => b.datetime === timestamp.toISOString()
-      ) ?? [];
-
-    if (
-      (room.book_by_seat && slotBookings.length === room.capacity) ||
-      (!room.book_by_seat && slotBookings.length) ||
-      slotBookings.find((b) => b.isOwner)
-    ) {
-      return renderBookedCell(slotBookings, timestamp);
-    }
-
-    if (timestamp < getStartHourOfDate(new Date())) {
-      return <td className={styles.unavailable}>-</td>;
-    }
-
-    return (
-      <td
-        className={`${styles.cell} ${styles.available} ${
-          !isUserAllowedToBookRoom(room) ? styles.disabled : ""
-        }`}
-        onClick={async () => {
-          if (
-            isUserAllowedToBookRoom(room) &&
-            (await confirmDialog("Are you sure you want to book this slot?"))
-          ) {
-            await book(timestamp, room.id).then(() => {
-              pushSuccessToast("Room booked successfully!");
-              mutate();
-            });
-          }
-        }}
-      >
-        Book?{" "}
-        {room.book_by_seat
-          ? `(available: ${room.capacity - slotBookings.length}/${
-              room.capacity
-            })`
-          : ""}
-      </td>
     );
   };
 
