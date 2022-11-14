@@ -65,17 +65,13 @@ export default function Scheduler({ buildingId, session }) {
     }
 
     const slotBookedByLoggedInUser = slotBookings.find((b) => b.isOwner);
-
-    let style = styles.available;
-    if (slotBookedByLoggedInUser) style = styles.myBooking;
-    else if (!isUserAllowedToBookRoom(room)) style = styles.disabled;
-    else style = styles.unavailable;
-
     const renderBody = () => {
       if (slotBookedByLoggedInUser) {
         return (
           <td
-            className={`${styles.cell} ${style}`}
+            className={`${styles.cell} ${
+              slotBookedByLoggedInUser ? styles.myBooking : styles.unavailable
+            }`}
             onClick={async () => {
               if (
                 await confirmDialog(
