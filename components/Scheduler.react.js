@@ -60,13 +60,16 @@ export default function Scheduler({ buildingId, session }) {
         (b) => b.datetime === timestamp.toISOString()
       ) ?? [];
 
-    if (!slotBookings.length && timestamp < getStartHourOfDate(new Date())) {
+    const startHourOfToday = getStartHourOfDate(new Date());
+    const isSlotBeforeToday = timestamp < startHourOfToday;
+
+    if (!slotBookings.length && isSlotBeforeToday) {
       return <td className={styles.unavailable}>-</td>;
     }
 
     const slotBookedByLoggedInUser = slotBookings.find((b) => b.isOwner);
     const renderBody = () => {
-      if (slotBookedByLoggedInUser) {
+      if (slotBookedByLoggedInUser || isSlotBeforeToday) {
         return (
           <td
             className={`${styles.cell} ${
@@ -85,7 +88,10 @@ export default function Scheduler({ buildingId, session }) {
               }
             }}
           >
-            <span>Booked</span>
+            <span>
+              Booked{" "}
+              {room.book_by_seat && `(${slotBookings.length}/${room.capacity})`}
+            </span>
           </td>
         );
       } else {
