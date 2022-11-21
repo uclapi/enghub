@@ -60,16 +60,22 @@ export default function Scheduler({ buildingId, session }) {
         (b) => b.datetime === timestamp.toISOString()
       ) ?? [];
 
-    const startHourOfToday = getStartHourOfDate(new Date());
-    const isSlotBeforeToday = timestamp < startHourOfToday;
+    const startHourOfNow = getStartHourOfDate(new Date());
+    const isSlotInPast = timestamp < startHourOfNow;
 
-    if (!slotBookings.length && isSlotBeforeToday) {
+    if (!slotBookings.length && isSlotInPast) {
       return <td className={styles.unavailable}>-</td>;
     }
 
     const slotBookedByLoggedInUser = slotBookings.find((b) => b.isOwner);
     const renderBody = () => {
-      if (slotBookedByLoggedInUser || isSlotBeforeToday) {
+      const isUnavailable =
+        isSlotInPast ||
+        (room.book_by_seat
+          ? slotBookings.length >= room.capacity
+          : slotBookings.length > 0);
+
+      if (slotBookedByLoggedInUser || isUnavailable) {
         return (
           <td
             className={`${styles.cell} ${
@@ -77,9 +83,10 @@ export default function Scheduler({ buildingId, session }) {
             }`}
             onClick={async () => {
               if (
-                await confirmDialog(
+                slotBookedByLoggedInUser &&
+                (await confirmDialog(
                   "Are you sure you want to cancel this booking?"
-                )
+                ))
               ) {
                 await cancelBooking(slotBookedByLoggedInUser.id).then(() => {
                   pushSuccessToast("Booking cancelled successfully!");
