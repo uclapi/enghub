@@ -9,6 +9,13 @@ export default catchErrorsFrom(async (req, res) => {
   }
 
   if (req.method === "GET") {
+    if (!req.query.buildingId) {
+      return res.status(422).json({
+        error: true,
+        message: "You did not provide valid details for the room",
+      });
+    }
+
     const rooms = session.user.isAdmin
       ? await prisma.enghub_rooms.findMany({
           orderBy: [{ active: "desc" }, { name: "desc" }],
@@ -43,6 +50,14 @@ export default catchErrorsFrom(async (req, res) => {
       return res.status(422).json({
         error: true,
         message: "You did not provide valid details for the new room",
+      });
+    }
+
+    if (!session.user.isAdmin) {
+      return res.status(403).json({
+        error: true,
+        message:
+          "You do not have permission to add new rooms to the system.",
       });
     }
 

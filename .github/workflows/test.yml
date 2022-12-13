@@ -18,10 +18,14 @@ jobs:
         with:
           path: "./.env.test"
 
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ^7.17.1
+
       - name: Docker compose build and up
         run: |
             docker-compose -f docker-compose-test.yml up -d
-            npm ci
+            pnpm install
             DATABASE_URL=${{ steps.dotenv.outputs.DATABASE_URL }} npm run migrate
 
       - name: Run tests

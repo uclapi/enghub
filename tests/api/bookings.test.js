@@ -21,13 +21,13 @@ describe('GET /api/bookings', () => {
     mockUserOnce(users.nonAdmin);
     const { req, res } = createMocks({
       method: 'GET',
-      query: { date: bookings[0].datetime }
+      query: { date: bookings[0].datetime, buildingId: 1 }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(200);
     expect(JSON.parse(res._getData())).toEqual({
       bookings: {
-        [bookings[0].roomName]: [
+        [bookings[0].roomId]: [
           { ...bookings[0], isOwner: false, fullName: null, email: null }
         ]
       }
@@ -38,13 +38,13 @@ describe('GET /api/bookings', () => {
     mockUserOnce(users.admin);
     const { req, res } = createMocks({
       method: 'GET',
-      query: { date: bookings[0].datetime }
+      query: { date: bookings[0].datetime, buildingId: 1 }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(200);
     expect(JSON.parse(res._getData())).toEqual({
       bookings: {
-        [bookings[0].roomName]: [
+        [bookings[0].roomId]: [
           { ...bookings[0], isOwner: true, fullName: users.admin.fullName, email: users.admin.email }
         ]
       }
@@ -57,7 +57,7 @@ describe('GET /api/bookings', () => {
     date.setDate(date.getDate() - 1);
     const { req, res } = createMocks({
       method: 'GET',
-      query: { date: date.toISOString() }
+      query: { date: date.toISOString(), buildingId: 1 }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(403);
@@ -69,7 +69,7 @@ describe('GET /api/bookings', () => {
     date.setDate(date.getDate() + 8);
     const { req, res } = createMocks({
       method: 'GET',
-      query: { date: date.toISOString() }
+      query: { date: date.toISOString(), buildingId: 1 }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(403);
@@ -79,13 +79,13 @@ describe('GET /api/bookings', () => {
     mockUserOnce(users.admin);
     const { req, res } = createMocks({
       method: 'GET',
-      query: { date: bookings[1].datetime }
+      query: { date: bookings[1].datetime, buildingId: 1 }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(200);
     expect(JSON.parse(res._getData())).toEqual({
       bookings: {
-        [bookings[1].roomName]: [
+        [bookings[1].roomId]: [
           { ...bookings[1], isOwner: false, fullName: users.nonAdmin.fullName, email: users.nonAdmin.email }
         ]
       }
@@ -98,11 +98,21 @@ describe('GET /api/bookings', () => {
     date.setDate(date.getDate() + 8);
     const { req, res } = createMocks({
       method: 'GET',
-      query: { date: date.toISOString() }
+      query: { date: date.toISOString(), buildingId: 1 }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(200);
     expect(JSON.parse(res._getData())).toEqual({ bookings: {} });
+  });
+
+  test('must provide building ID', async () => {
+    mockUserOnce(users.admin);
+    const { req, res } = createMocks({
+      method: 'GET',
+      query: { date: new Date().toISOString() }
+    });
+    await handleBookings(req, res);
+    expect(res._getStatusCode()).toBe(422);
   });
 
   test('redirects if not logged in', async () => {
@@ -118,12 +128,13 @@ describe('GET /api/bookings', () => {
 describe('POST /api/bookings', () => {
   test('admins can book >3 slots a week', async () => {
     const date = addDaysToDate(getToday(), 1);
+    date.setHours(8);
     for (let i = 0; i < 4; i++) {
       mockUserOnce(users.admin);
       date.setHours(date.getHours() + 1);
       const { req, res } = createMocks({
         method: 'POST',
-        body: { datetime: date.toISOString(), room_name: rooms[0].name }
+        body: { datetime: date.toISOString(), room_id: rooms[0].id }
       });
       await handleBookings(req, res);
       expect(res._getStatusCode()).toBe(200);
@@ -139,13 +150,14 @@ describe('POST /api/bookings', () => {
 
   test('non-admins cannot book >3 slots a week', async () => {
     const date = addDaysToDate(getToday(), 1);
-    // Already got one booking for this user in mock data, so add 2 more, then test for failure
+    date.setHours(8);
+
     for (let i = 0; i < 3; i++) {
       mockUserOnce(users.nonAdmin);
       date.setHours(date.getHours() + 1);
       const { req, res } = createMocks({
         method: 'POST',
-        body: { datetime: date.toISOString(), room_name: rooms[1].name }
+        body: { datetime: date.toISOString(), room_id: rooms[1].id }
       });
       await handleBookings(req, res);
       expect(res._getStatusCode()).toBe(200);
@@ -155,12 +167,11 @@ describe('POST /api/bookings', () => {
     date.setHours(date.getHours() + 1);
     const { req, res } = createMocks({
       method: 'POST',
-      body: { datetime: date.toISOString(), room_name: rooms[1].name }
+      body: { datetime: date.toISOString(), room_id: rooms[1].id }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(403);
 
-    // Check the 2 extra bookings we added are saved
     expect(await prisma.enghub_bookings.count({
       where: {
         datetime: { gte: addDaysToDate(getToday(), 1), lte: date },
@@ -171,10 +182,12 @@ describe('POST /api/bookings', () => {
 
   test('admins can book >7 days in advance', async () => {
     const date = addDaysToDate(getToday(), 8);
+    date.setHours(8);
+
     mockUserOnce(users.admin);
     const { req, res } = createMocks({
       method: 'POST',
-      body: { datetime: date.toISOString(), room_name: rooms[0].name }
+      body: { datetime: date.toISOString(), room_id: rooms[0].id }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(200);
@@ -186,10 +199,12 @@ describe('POST /api/bookings', () => {
 
   test('non-admins cannot book >7 days in advance', async () => {
     const date = addDaysToDate(getToday(), 8);
+    date.setHours(8);
+
     mockUserOnce(users.nonAdmin);
     const { req, res } = createMocks({
       method: 'POST',
-      body: { datetime: date.toISOString(), room_name: rooms[0].name }
+      body: { datetime: date.toISOString(), room_id: rooms[0].id }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(403);
@@ -199,7 +214,17 @@ describe('POST /api/bookings', () => {
     mockUserOnce(users.nonAdmin);
     const { req, res } = createMocks({
       method: 'POST',
-      body: { datetime: bookings[1].datetime, room_name: bookings[1].roomName }
+      body: { datetime: bookings[1].datetime, room_id: bookings[1].roomId }
+    });
+    await handleBookings(req, res);
+    expect(res._getStatusCode()).toBe(422);
+  });
+
+  test('cannot book inactive room', async () => {
+    mockUserOnce(users.nonAdmin);
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: { datetime: bookings[1].datetime, room_id: rooms[2].id }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(422);
@@ -212,13 +237,61 @@ describe('POST /api/bookings', () => {
     expect(res._getStatusCode()).toBe(422);
   });
 
-  test('cannot have slot collision', async () => {
+  test('cannot have slot collision when !book_by_seat', async () => {
     const date = addDaysToDate(getToday(), 1);
+    date.setHours(8);
+
     mockUserOnce(users.admin);
     date.setHours(date.getHours() + 1);
     const { req, res } = createMocks({
       method: 'POST',
-      body: { datetime: date.toISOString(), room_name: rooms[1].name }
+      body: { datetime: date.toISOString(), room_id: rooms[1].id }
+    });
+    await handleBookings(req, res);
+    expect(res._getStatusCode()).toBe(403);
+  });
+
+  test('can book multiple slots when book_by_seat', async () => {
+    const date = addDaysToDate(getToday(), 1);
+    date.setHours(8);
+
+    mockUserOnce(users.admin);
+    date.setHours(date.getHours() + 1);
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: { datetime: date.toISOString(), room_id: rooms[3].id }
+    });
+    await handleBookings(req, res);
+    expect(res._getStatusCode()).toBe(200);
+
+    mockUserOnce(users.admin2);
+    const { req: req2, res: res2 } = createMocks({
+      method: 'POST',
+      body: { datetime: date.toISOString(), room_id: rooms[3].id }
+    });
+    await handleBookings(req2, res2);
+    expect(res2._getStatusCode()).toBe(200);
+  });
+
+  test('must book valid slot', async () => {
+    const date = addDaysToDate(getToday(), 1);
+    date.setHours(2);
+    mockUserOnce(users.nonAdmin);
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: { datetime: date.toISOString(), room_id: rooms[1].id }
+    });
+    await handleBookings(req, res);
+    expect(res._getStatusCode()).toBe(422);
+  });
+
+  test('cannot book if not in whitelist', async () => {
+    const date = addDaysToDate(getToday(), 1);
+    date.setHours(8);
+    mockUserOnce(users.nonAdmin);
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: { datetime: date.toISOString(), room_id: rooms[4].id }
     });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(403);

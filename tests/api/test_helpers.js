@@ -34,6 +34,11 @@ export const users = {
     fullName: 'Non admin',
     isAdmin: false,
     image: ''
+  }, admin2: {
+    email: 'admin-2@ucl.ac.uk',
+    fullName: 'Admin 2',
+    isAdmin: true,
+    image: ''
   }
 };
 
@@ -41,24 +46,44 @@ export const rooms = [{
   name: 'A',
   capacity: 10,
   active: true,
+  id: 11,
+  book_by_seat: false,
 }, {
   name: 'B',
   capacity: 10,
   active: true,
+  id: 12,
+  book_by_seat: false,
 }, {
   name: 'C',
   capacity: 2,
   active: false,
+  id: 13,
+  book_by_seat: true,
+}, {
+  name: 'D',
+  capacity: 2,
+  active: true,
+  id: 14,
+  book_by_seat: true,
+}, {
+  name: 'E',
+  capacity: 2,
+  active: true,
+  id: 15,
+  book_by_seat: false,
 }];
 
 export const bookings = [{
   id: 'test',
   roomName: rooms[0].name,
+  roomId: rooms[0].id,
   datetime: addDaysToDate(getToday(), 2).toISOString(),
   email: users.admin.email
 }, {
   id: 'test1',
   roomName: rooms[0].name,
+  roomId: rooms[0].id,
   datetime: new Date('2022-01-02').toISOString(),
   email: users.nonAdmin.email
 }];
