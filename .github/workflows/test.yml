@@ -1,0 +1,29 @@
+name: "Test"
+
+on:
+  push
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Load env variables
+        id: dotenv
+        uses: falti/dotenv-action@v1.0.2
+        with:
+          path: "./.env.test"
+
+      - name: Docker compose build and up
+        run: |
+            docker-compose -f docker-compose-test.yml up -d
+            npm ci
+            DATABASE_URL=${{ steps.dotenv.outputs.DATABASE_URL }} npm run migrate
+
+      - name: Run tests
+        run: |
+            DATABASE_URL=${{ steps.dotenv.outputs.DATABASE_URL }} npm run test:api
