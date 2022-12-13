@@ -2,79 +2,23 @@
 import { createMocks } from 'node-mocks-http';
 import handleBookings from '../../pages/api/bookings/index';
 import { PrismaClient } from "@prisma/client";
-import { mockUserOnce } from './test_helpers';
+import { mockUserOnce, users, bookings, rooms } from './test_helpers';
 import { getToday, addDaysToDate } from '../../lib/helpers';
 jest.mock("next-auth/react");
 
 const prisma = new PrismaClient();
-
-const users = [{
-  email: 'zxx@ucl.ac.uk',
-  fullName: 'Admin',
-  isAdmin: true,
-  image: ''
-}, {
-  email: 'xxx@ucl.ac.uk',
-  fullName: 'Non admin',
-  isAdmin: false,
-  image: ''
-}];
-
-const rooms = [{
-  name: 'Room',
-  capacity: 10,
-  active: true,
-}, {
-  name: 'Room2',
-  capacity: 10,
-  active: true,
-}];
-
-const bookings = [{
-  id: 'test',
-  roomName: rooms[0].name,
-  datetime: new Date().toISOString(),
-  email: users[1].email
-}, {
-  id: 'test1',
-  roomName: rooms[0].name,
-  datetime: new Date('2022-01-02').toISOString(),
-  email: users[0].email
-}];
-
-beforeAll(async () => {
-  await prisma.enghub_users.createMany({
-    data: users.map(u => ({
-      full_name: u.fullName,
-      email: u.email,
-      is_admin: u.isAdmin,
-    }))
-  });
-  await prisma.enghub_rooms.createMany({ data: rooms });
-  await prisma.enghub_bookings.createMany({
-    data: bookings.map(b => ({
-      id: b.id, room_name: b.roomName, datetime: b.datetime, email: b.email,
-    }))
-  });
-});
-
-afterAll(async () => {
-  await prisma.enghub_bookings.deleteMany();
-  await prisma.enghub_rooms.deleteMany();
-  await prisma.enghub_users.deleteMany();
-  await prisma.$disconnect();
-});
+afterAll(async () => { await prisma.$disconnect(); });
 
 describe('GET /api/bookings', () => {
   test('must provide date', async () => {
-    mockUserOnce(users[1]);
+    mockUserOnce(users.admin);
     const { req, res } = createMocks({ method: 'GET' });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(422);
   });
 
   test('non-admins can get bookings excluding name of booker', async () => {
-    mockUserOnce(users[1]);
+    mockUserOnce(users.nonAdmin);
     const { req, res } = createMocks({
       method: 'GET',
       query: { date: bookings[0].datetime }
@@ -84,14 +28,14 @@ describe('GET /api/bookings', () => {
     expect(JSON.parse(res._getData())).toEqual({
       bookings: {
         [bookings[0].roomName]: [
-          { ...bookings[0], isOwner: true, fullName: null, email: null }
+          { ...bookings[0], isOwner: false, fullName: null, email: null }
         ]
       }
     });
   });
 
   test('admins can get bookings including name of booker', async () => {
-    mockUserOnce(users[0]);
+    mockUserOnce(users.admin);
     const { req, res } = createMocks({
       method: 'GET',
       query: { date: bookings[0].datetime }
@@ -101,14 +45,14 @@ describe('GET /api/bookings', () => {
     expect(JSON.parse(res._getData())).toEqual({
       bookings: {
         [bookings[0].roomName]: [
-          { ...bookings[0], isOwner: false, fullName: users[1].fullName, email: users[1].email }
+          { ...bookings[0], isOwner: true, fullName: users.admin.fullName, email: users.admin.email }
         ]
       }
     });
   });
 
   test('non-admins cannot view past bookings', async () => {
-    mockUserOnce(users[1]);
+    mockUserOnce(users.nonAdmin);
     const date = new Date();
     date.setDate(date.getDate() - 1);
     const { req, res } = createMocks({
@@ -120,7 +64,7 @@ describe('GET /api/bookings', () => {
   });
 
   test('non-admins cannot view future bookings past 7 days', async () => {
-    mockUserOnce(users[1]);
+    mockUserOnce(users.nonAdmin);
     const date = new Date();
     date.setDate(date.getDate() + 8);
     const { req, res } = createMocks({
@@ -132,7 +76,7 @@ describe('GET /api/bookings', () => {
   });
 
   test('admins can view past bookings', async () => {
-    mockUserOnce(users[0]);
+    mockUserOnce(users.admin);
     const { req, res } = createMocks({
       method: 'GET',
       query: { date: bookings[1].datetime }
@@ -142,14 +86,14 @@ describe('GET /api/bookings', () => {
     expect(JSON.parse(res._getData())).toEqual({
       bookings: {
         [bookings[1].roomName]: [
-          { ...bookings[1], isOwner: true, fullName: users[0].fullName, email: users[0].email }
+          { ...bookings[1], isOwner: false, fullName: users.nonAdmin.fullName, email: users.nonAdmin.email }
         ]
       }
     });
   });
 
   test('admins can view future bookings past 7 days', async () => {
-    mockUserOnce(users[0]);
+    mockUserOnce(users.admin);
     const date = new Date();
     date.setDate(date.getDate() + 8);
     const { req, res } = createMocks({
@@ -175,7 +119,7 @@ describe('POST /api/bookings', () => {
   test('admins can book >3 slots a week', async () => {
     const date = addDaysToDate(getToday(), 1);
     for (let i = 0; i < 4; i++) {
-      mockUserOnce(users[0]);
+      mockUserOnce(users.admin);
       date.setHours(date.getHours() + 1);
       const { req, res } = createMocks({
         method: 'POST',
@@ -188,7 +132,7 @@ describe('POST /api/bookings', () => {
     expect(await prisma.enghub_bookings.count({
       where: {
         datetime: { gte: addDaysToDate(getToday(), 1), lte: date },
-        email: users[0].email,
+        email: users.admin.email,
       }
     })).toEqual(4);
   });
@@ -196,8 +140,8 @@ describe('POST /api/bookings', () => {
   test('non-admins cannot book >3 slots a week', async () => {
     const date = addDaysToDate(getToday(), 1);
     // Already got one booking for this user in mock data, so add 2 more, then test for failure
-    for (let i = 0; i < 2; i++) {
-      mockUserOnce(users[1]);
+    for (let i = 0; i < 3; i++) {
+      mockUserOnce(users.nonAdmin);
       date.setHours(date.getHours() + 1);
       const { req, res } = createMocks({
         method: 'POST',
@@ -207,7 +151,7 @@ describe('POST /api/bookings', () => {
       expect(res._getStatusCode()).toBe(200);
     }
 
-    mockUserOnce(users[1]);
+    mockUserOnce(users.nonAdmin);
     date.setHours(date.getHours() + 1);
     const { req, res } = createMocks({
       method: 'POST',
@@ -220,14 +164,14 @@ describe('POST /api/bookings', () => {
     expect(await prisma.enghub_bookings.count({
       where: {
         datetime: { gte: addDaysToDate(getToday(), 1), lte: date },
-        email: users[1].email,
+        email: users.nonAdmin.email,
       }
-    })).toEqual(2);
+    })).toEqual(3);
   });
 
   test('admins can book >7 days in advance', async () => {
     const date = addDaysToDate(getToday(), 8);
-    mockUserOnce(users[0]);
+    mockUserOnce(users.admin);
     const { req, res } = createMocks({
       method: 'POST',
       body: { datetime: date.toISOString(), room_name: rooms[0].name }
@@ -236,13 +180,13 @@ describe('POST /api/bookings', () => {
     expect(res._getStatusCode()).toBe(200);
 
     expect(await prisma.enghub_bookings.count({
-      where: { datetime: date, email: users[0].email }
+      where: { datetime: date, email: users.admin.email }
     })).toEqual(1);
   });
 
   test('non-admins cannot book >7 days in advance', async () => {
     const date = addDaysToDate(getToday(), 8);
-    mockUserOnce(users[1]);
+    mockUserOnce(users.nonAdmin);
     const { req, res } = createMocks({
       method: 'POST',
       body: { datetime: date.toISOString(), room_name: rooms[0].name }
@@ -252,7 +196,7 @@ describe('POST /api/bookings', () => {
   });
 
   test('cannot book room in past', async () => {
-    mockUserOnce(users[1]);
+    mockUserOnce(users.nonAdmin);
     const { req, res } = createMocks({
       method: 'POST',
       body: { datetime: bookings[1].datetime, room_name: bookings[1].roomName }
@@ -262,7 +206,7 @@ describe('POST /api/bookings', () => {
   });
 
   test('must provide date/time', async () => {
-    mockUserOnce(users[1]);
+    mockUserOnce(users.nonAdmin);
     const { req, res } = createMocks({ method: 'POST' });
     await handleBookings(req, res);
     expect(res._getStatusCode()).toBe(422);
@@ -270,7 +214,7 @@ describe('POST /api/bookings', () => {
 
   test('cannot have slot collision', async () => {
     const date = addDaysToDate(getToday(), 1);
-    mockUserOnce(users[0]);
+    mockUserOnce(users.admin);
     date.setHours(date.getHours() + 1);
     const { req, res } = createMocks({
       method: 'POST',
