@@ -5,6 +5,8 @@ import {
   BOOKING_LENGTH,
   MAX_DAYS_IN_ADVANCE_BOOKABLE,
   MAX_MINUTES_BOOKABLE_PER_WEEK,
+  WEEKDAY_SLOTS,
+  WEEKEND_SLOTS,
 } from "../../../lib/constants";
 import { prisma } from "../../../lib/db";
 import {
@@ -16,7 +18,7 @@ import {
 import { catchErrorsFrom } from "../../../lib/serverHelpers";
 import sgMail from "@sendgrid/mail";
 import { createEvent } from "ics";
-import { customAlphabet } from 'nanoid';
+import { customAlphabet } from "nanoid";
 
 export default catchErrorsFrom(async (req, res) => {
   const session = await getSession({ req });
@@ -49,14 +51,21 @@ export default catchErrorsFrom(async (req, res) => {
     }
 
     const bookings = await prisma.enghub_bookings.findMany({
-      where: { datetime: { gte: start, lte: end } },
-      include: { enghub_users: { select: { full_name: true } } },
+      where: {
+        datetime: { gte: start, lte: end },
+        enghub_rooms: { building_id: { equals: +req.query.buildingId } },
+      },
+      include: {
+        enghub_users: { select: { full_name: true } },
+        enghub_rooms: { select: { name: true } },
+      },
     });
 
     const bookingsByRoom = bookings.reduce((acc, cur) => {
       const record = {
         id: cur.id,
-        roomName: cur.room_name,
+        roomName: cur.enghub_rooms.name,
+        roomId: cur.room_id,
         datetime: cur.datetime,
         // Whether the booking belongs to the logged in user
         isOwner: session.user.email === cur.email,
@@ -65,8 +74,8 @@ export default catchErrorsFrom(async (req, res) => {
         email: session.user.isAdmin ? cur.email : null,
       };
 
-      if (!acc[cur.room_name]) acc[cur.room_name] = [record];
-      else acc[cur.room_name].push(record);
+      if (!acc[cur.room_id]) acc[cur.room_id] = [record];
+      else acc[cur.room_id].push(record);
 
       return acc;
     }, {});
@@ -75,7 +84,7 @@ export default catchErrorsFrom(async (req, res) => {
   }
 
   if (req.method === "POST") {
-    if (req.body?.datetime == null || req.body?.room_name == null) {
+    if (req.body?.datetime == null || req.body?.room_id == null) {
       return res.status(422).json({
         error: true,
         message: "You did not provide a valid date/time/room for the booking",
@@ -92,14 +101,65 @@ export default catchErrorsFrom(async (req, res) => {
       });
     }
 
-    const existingBookingsCount = await prisma.enghub_bookings.count({
-      where: {
-        datetime,
-        room_name: req.body.room_name,
-      },
+    const slots = datetime.getDay() % 6 == 0 ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
+    if (slots.indexOf(datetime.toTimeString().substr(0, 5)) == -1) {
+      return res.status(422).json({
+        error: true,
+        message: "You did not provide a valid date/time for the booking",
+      });
+    }
+
+    const room = await prisma.enghub_rooms.findFirst({
+      where: { id: req.body.room_id },
+      include: { enghub_buildings: { select: { name: true } } },
     });
 
-    if (existingBookingsCount !== 0) {
+    if (!room) {
+      return res.status(422).json({
+        error: true,
+        message: "You provided an invalid room",
+      });
+    }
+
+    let allowedToBookRoom = false;
+    if (session.user.isAdmin) {
+      allowedToBookRoom = true;
+    } else if (!room.admin_only) {
+      if (
+        room.restricted_to_group !== null &&
+        session.user.uclGroups.includes(room.restricted_to_group)
+      ) {
+        allowedToBookRoom = true;
+      }
+    }
+
+    // Only perform whitelist query as last resort
+    if (!allowedToBookRoom) {
+      const whitelistedUser =
+        await prisma.enghub_rooms_user_whitelist.findFirst({
+          where: { email: session.user.email },
+        });
+
+      if (whitelistedUser) allowedToBookRoom = true;
+    }
+
+    if (!allowedToBookRoom) {
+      return res.status(403).json({
+        error: true,
+        message: "You do not have permission to book this room",
+      });
+    }
+
+    const existingBookings = await prisma.enghub_bookings.findMany({
+      where: { datetime, room_id: req.body.room_id },
+      select: { enghub_users: { select: { email: true } } },
+    });
+
+    if (
+      (room.book_by_seat && existingBookings.length >= room.capacity) ||
+      (!room.book_by_seat && existingBookings.length > 0) ||
+      existingBookings.find((b) => b.enghub_users.email === session.user.email)
+    ) {
       return res.status(403).json({
         error: true,
         message:
@@ -145,14 +205,17 @@ export default catchErrorsFrom(async (req, res) => {
       });
     }
 
-    const newBookingId = customAlphabet(BOOKING_ID_ALPHABET, BOOKING_ID_LENGTH)();
+    const newBookingId = customAlphabet(
+      BOOKING_ID_ALPHABET,
+      BOOKING_ID_LENGTH
+    )();
     const shortBookingId = newBookingId.substring(0, 5);
     const query = await prisma.enghub_bookings.create({
       data: {
         id: newBookingId,
         datetime,
         email: session.user.email,
-        room_name: req.body.room_name,
+        room_id: req.body.room_id,
       },
     });
 
@@ -160,11 +223,17 @@ export default catchErrorsFrom(async (req, res) => {
     if (process.env.SENDGRID_SECRET && !session.user.isAdmin) {
       try {
         const event = {
-          start: [datetime.getFullYear(), datetime.getMonth() + 1, datetime.getDay() - 1, datetime.getHours(), 0],
+          start: [
+            datetime.getFullYear(),
+            datetime.getMonth() + 1,
+            datetime.getDay() - 1,
+            datetime.getHours(),
+            0,
+          ],
           duration: { hours: 1 },
-          title: `Enghub ${req.body.room_name}`,
+          title: `${room.enghub_buildings.name} ${room.name}`,
           description: `Booking confirmation number: ${shortBookingId}`,
-          location: `Engineering Hub ${req.body.room_name}, UCL`,
+          location: `${room.enghub_buildings.name}, ${room.name}, UCL`,
           url: "https://enghub.io",
           geo: { lat: 51.523859, lon: -0.131974 },
           status: "CONFIRMED",
@@ -178,16 +247,29 @@ export default catchErrorsFrom(async (req, res) => {
           to: session.user.email,
           from: {
             email: "rooms@enghub.io",
-            name: "Enghub"
+            name: "Enghub",
           },
           templateId: "d-d02d6b45251f43b9867bfbe0324759b7",
           dynamicTemplateData: {
             first_name: session.user.name.split(" ")[0],
-            room: req.body.room_name,
-            time: new Intl.DateTimeFormat("en-GB", { timeStyle: "short" }).format(datetime),
-            date: new Intl.DateTimeFormat("en-GB").format(datetime),
-            date_long: new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(datetime),
-            time_long: new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: true, minute: "2-digit" }).format(datetime),
+            room: room.name,
+            time: new Intl.DateTimeFormat("en-GB", {
+              timeStyle: "short",
+              timeZone: "Europe/London",
+            }).format(datetime),
+            date: new Intl.DateTimeFormat("en-GB", {
+              timeZone: "Europe/London",
+            }).format(datetime),
+            date_long: new Intl.DateTimeFormat("en-GB", {
+              dateStyle: "full",
+              timeZone: "Europe/London",
+            }).format(datetime),
+            time_long: new Intl.DateTimeFormat("en-GB", {
+              hour: "numeric",
+              hour12: true,
+              minute: "2-digit",
+              timeZone: "Europe/London",
+            }).format(datetime),
             booking_number: shortBookingId,
           },
           attachments: [
@@ -201,7 +283,7 @@ export default catchErrorsFrom(async (req, res) => {
           ],
         });
       } catch (error) {
-        console.error('Failed to send confirmation email', error);
+        console.error("Failed to send confirmation email", error);
       }
     }
 

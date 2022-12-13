@@ -11,10 +11,25 @@ export default catchErrorsFrom(async (req, res) => {
   if (req.method === "GET") {
     const bookings = await prisma.enghub_bookings.findMany({
       where: { email: { equals: session.user.email } },
-      select: { datetime: true, room_name: true, id: true }, // Don't select user email
+      select: {
+        // Don't select user email
+        datetime: true,
+        room_id: true,
+        id: true,
+        enghub_rooms: {
+          select: { name: true, enghub_buildings: { select: { name: true } } },
+        },
+      },
       orderBy: [{ datetime: "asc" }], // Most recent first
     });
 
-    return res.status(200).json({ bookings });
+    return res.status(200).json({
+      bookings: bookings.map((b) => {
+        b.room_name = b.enghub_rooms.name;
+        b.building_name = b.enghub_rooms.enghub_buildings.name;
+        delete b.enghub_rooms;
+        return b;
+      }),
+    });
   }
 });

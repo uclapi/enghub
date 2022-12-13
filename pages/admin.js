@@ -1,152 +1,13 @@
 import { getSession } from "next-auth/react";
 import Head from "next/head";
 import { useState } from "react";
-import { Panel, Button, Form, Input, Loader, Message } from "rsuite";
+import { Panel, Button, Form, Input } from "rsuite";
 import LoginMessage from "../components/LoginMessage.react";
-import { addAdmin, updateRoomActiveState, updateRoomCapacity } from "../lib/api";
-import { pushSuccessToast } from "../lib/helpers";
-import styles from "../styles/Admin.module.css";
-import EditIcon from "@rsuite/icons/Edit";
-import CheckOutlineIcon from "@rsuite/icons/CheckOutline";
-import CloseOutlineIcon from "@rsuite/icons/CloseOutline";
+import { addAdmin, updateRoom } from "../lib/api";
+import { pushErrorToast, pushSuccessToast } from "../lib/helpers";
 import { useRooms } from "../lib/hooks";
-
-const EditRooms = () => {
-  const { rooms, isLoading, isError, mutate } = useRooms();
-  const [editingRoom, setEditingRoom] = useState(null);
-
-  const EditCell = ({ room }) => {
-    const [value, setValue] = useState(room.capacity);
-    return (
-      <>
-        <Input className={styles.tableEditInput} value={value} type="number" min={1} onChange={(v) => setValue(+v)} />
-        <CheckOutlineIcon
-          className={styles.icon}
-          onClick={() => {
-            updateRoomCapacity(room.name, value).then(() => {
-              setEditingRoom(null);
-              mutate();
-              pushSuccessToast("Room capacity updated successfully!");
-            });
-          }}
-        />
-        <CloseOutlineIcon className={styles.icon} onClick={() => setEditingRoom(null)} />
-      </>
-    );
-  };
-
-  const CreateRoom = () => {
-    const [roomName, setRoomName] = useState("");
-    const [capacity, setCapacity] = useState(1);
-
-    return (
-      <tr>
-        <td>
-          <Input className={styles.tableEditInputName} maxLength={5} value={roomName} onChange={setRoomName} />
-        </td>
-        <td>
-          <Input
-            className={styles.tableEditInput}
-            value={capacity}
-            type="number"
-            min={1}
-            onChange={(v) => setCapacity(+v)}
-          />
-        </td>
-        <td>
-          <Button
-            appearance="default"
-            onClick={() =>
-              updateRoomCapacity(roomName, capacity).then(() => {
-                pushSuccessToast("Room created!");
-                mutate();
-              })
-            }
-          >
-            Create?
-          </Button>
-        </td>
-      </tr>
-    );
-  };
-
-  const renderCapacityCell = (room) =>
-    editingRoom?.room === room.name ? (
-      <EditCell room={room} />
-    ) : (
-      <>
-        {room.capacity} <EditIcon onClick={() => setEditingRoom({ room: room.name })} className={styles.icon} />
-      </>
-    );
-
-  return (
-    <>
-      <h4>Manage Rooms</h4>
-      <p>
-        You can edit room capacities or mark rooms as inactive below.
-        <br />
-        <i>
-          Note: marking a room as inactive will <strong>not</strong> delete existing bookings for this room, but will
-          prevent new bookings from being made.
-        </i>
-      </p>
-
-      {isLoading && <Loader content="Loading..." vertical />}
-
-      {isError && (
-        <Message type="error" showIcon className="error-message">
-          There was an error loading the current rooms. Please try again later or contact us if the error persists.
-        </Message>
-      )}
-
-      {!isLoading && !isError && (
-        <table height={200} className={styles.roomsTable}>
-          <tr>
-            <th>Room Name</th>
-            <th>Capacity</th>
-            <th>Action</th>
-          </tr>
-          {rooms.map((room) => (
-            <tr>
-              <td>{room.name}</td>
-              <td>{renderCapacityCell(room)}</td>
-              <td>
-                {room.active ? (
-                  <Button
-                    appearance="primary"
-                    color="red"
-                    onClick={() =>
-                      updateRoomActiveState(room.name, false).then(() => {
-                        pushSuccessToast("Room marked as inactive!");
-                        mutate();
-                      })
-                    }
-                  >
-                    Mark as inactive?
-                  </Button>
-                ) : (
-                  <Button
-                    appearance="primary"
-                    color="green"
-                    onClick={() =>
-                      updateRoomActiveState(room.name, true).then(() => {
-                        pushSuccessToast("Room marked as active!");
-                        mutate();
-                      })
-                    }
-                  >
-                    Mark as active?
-                  </Button>
-                )}
-              </td>
-            </tr>
-          ))}
-          <CreateRoom />
-        </table>
-      )}
-    </>
-  );
-};
+import ManageRooms from "../components/ManageRooms";
+import styles from "../styles/Admin.module.css";
 
 const AddAdmins = () => {
   const [email, setEmail] = useState("");
@@ -154,15 +15,23 @@ const AddAdmins = () => {
     <>
       <h4>Manage Admins</h4>
       <p>
-        To add an administrator to the system, please enter their UCL email address below. When they next login, they
-        will be granted administrator privileges:
+        Administrators (usually staff) can see all booking details, book any
+        room on the system with unlimited hours, and can book any slot in the
+        future.
+      </p>
+      <p>
+        To add an administrator to the system, please enter their UCL
+        short-email address below. When they next login, they will be granted
+        administrator privileges:
       </p>
       <br />
       <Form
         layout="inline"
         onSubmit={() => {
           addAdmin(email).then(() =>
-            pushSuccessToast("Administrator added successfully! This will take effect when they next login.")
+            pushSuccessToast(
+              "Administrator added successfully! This will take effect when they next login."
+            )
           );
         }}
       >
@@ -194,10 +63,10 @@ export default function Admin({ session }) {
       </Head>
 
       <Panel header={<h2>Administration</h2>} bordered className="card">
-        {session ? (
+        {session?.user?.isAdmin ? (
           <>
             <AddAdmins />
-            <EditRooms />
+            <ManageRooms />
           </>
         ) : (
           <LoginMessage />

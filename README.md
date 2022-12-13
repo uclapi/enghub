@@ -4,7 +4,7 @@ This is the code for [https://enghub.io] -- the room booking system for the UCL 
 
 ## Overview
 
-This is a [Next.js app](https://nextjs.org/) using [Prisma](https://www.prisma.io/) as an ORM with the main UCL API Postgres database.
+This is a [Next.js app](https://nextjs.org/) using [Prisma](https://www.prisma.io/) as an ORM for an EngHub PostgreSQL database.
 
 Authentication is done using [UCL API's OAuth system](https://uclapi.com/docs/#operations-tag-OAuth) via [NextAuth.js](https://next-auth.js.org/).
 

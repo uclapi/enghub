@@ -11,10 +11,15 @@ import {
   Whisper,
 } from "rsuite";
 import { book, cancelBooking } from "../lib/api";
-import { MAX_DAYS_IN_ADVANCE_BOOKABLE, SLOTS } from "../lib/constants";
+import {
+  MAX_DAYS_IN_ADVANCE_BOOKABLE,
+  WEEKDAY_SLOTS,
+  WEEKEND_SLOTS,
+} from "../lib/constants";
 import {
   addDaysToDate,
   getStartHourOfDate,
+  getShortDateString,
   getDateString,
   confirmDialog,
   pushSuccessToast,
@@ -24,111 +29,148 @@ import {
 import { useBookings, useRooms } from "../lib/hooks";
 import styles from "../styles/Scheduler.module.css";
 
-export default function Scheduler({ session }) {
+export default function Scheduler({ buildingId, session }) {
   const [date, setDate] = useState(getToday());
   const {
     bookings,
     isLoading: isLoadingBookings,
     isError: isErrorBookings,
     mutate,
-  } = useBookings(date.toISOString().substring(0, 10));
+  } = useBookings(buildingId, getShortDateString(date));
 
   const {
     rooms,
     isLoading: isLoadingRooms,
     isError: isErrorRooms,
-  } = useRooms();
+  } = useRooms(buildingId);
 
   const isError = isErrorBookings || isErrorRooms;
   const isLoading = isLoadingBookings || isLoadingRooms;
 
-  const renderBookedCell = (booking, timestamp) => (
-    <Whisper
-      trigger="hover"
-      placement="right"
-      controlId={`control-id-${booking.datetime}-${booking.roomName}`}
-      enterable
-      speaker={
-        <Popover
-          title={
-            booking.fullName && session.user.isAdmin
-              ? "Details (admin-only)"
-              : "Details"
-          }
-        >
-          <p>
-            {session.user.isAdmin && (
-              <>
-                Booked by{" "}
-                <a
-                  href={`mailto:${
-                    booking.email
-                  }?subject=EngHub%20Room%20${booking.roomName}%20Booking%20(${timestamp.toUTCString()})`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {booking.fullName}
-                </a>
-                .
-                <br />
-              </>
-            )}
-            Booking ID: {booking.id.substring(0, 5)}.
-          </p>
-        </Popover>
-      }
-    >
-      <td
-        className={`${styles.cell} ${
-          booking.isOwner ? styles.myBooking : styles.unavailable
-        }`}
-        onClick={async () => {
-          if (
-            booking.isOwner &&
-            (await confirmDialog(
-              "Are you sure you want to cancel this booking?"
-            ))
-          ) {
-            await cancelBooking(booking.id).then(() => {
-              pushSuccessToast("Booking cancelled successfully!");
-              mutate();
-            });
-          }
-        }}
-      >
-        <span>Booked</span>
-      </td>
-    </Whisper>
-  );
+  const slots =
+    date.getDay() == 6 || date.getDay() == 0 ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
 
-  const renderCell = (date, time, roomName) => {
+  const isUserAllowedToBookRoom = (room) =>
+    !(room.admin_only && !session.user.isAdmin);
+
+  const renderCell = (date, time, room) => {
     const timestamp = getTimestamp(date, time);
-    const booking = bookings?.[roomName]?.find(
-      (b) => b.datetime === timestamp.toISOString()
-    );
+    const slotBookings =
+      bookings?.[room.id]?.filter(
+        (b) => b.datetime === timestamp.toISOString()
+      ) ?? [];
 
-    if (booking) {
-      return renderBookedCell(booking, timestamp);
-    }
+    const startHourOfNow = getStartHourOfDate(new Date());
+    const isSlotInPast = timestamp < startHourOfNow;
 
-    if (timestamp < getStartHourOfDate(new Date())) {
+    if (!slotBookings.length && isSlotInPast) {
       return <td className={styles.unavailable}>-</td>;
     }
 
+    const slotBookedByLoggedInUser = slotBookings.find((b) => b.isOwner);
+    const renderBody = () => {
+      const isUnavailable =
+        isSlotInPast ||
+        (room.book_by_seat
+          ? slotBookings.length >= room.capacity
+          : slotBookings.length > 0);
+
+      if (slotBookedByLoggedInUser || isUnavailable) {
+        return (
+          <td
+            className={`${styles.cell} ${
+              slotBookedByLoggedInUser ? styles.myBooking : styles.unavailable
+            }`}
+            onClick={async () => {
+              if (
+                slotBookedByLoggedInUser &&
+                (await confirmDialog(
+                  "Are you sure you want to cancel this booking?"
+                ))
+              ) {
+                await cancelBooking(slotBookedByLoggedInUser.id).then(() => {
+                  pushSuccessToast("Booking cancelled successfully!");
+                  mutate();
+                });
+              }
+            }}
+          >
+            <span>
+              Booked{" "}
+              {room.book_by_seat && `(${slotBookings.length}/${room.capacity})`}
+            </span>
+          </td>
+        );
+      } else {
+        return (
+          <td
+            className={`${styles.cell} ${styles.available} ${
+              !isUserAllowedToBookRoom(room) ? styles.disabled : ""
+            }`}
+            onClick={async () => {
+              if (
+                isUserAllowedToBookRoom(room) &&
+                (await confirmDialog(
+                  "Are you sure you want to book this slot?"
+                ))
+              ) {
+                await book(timestamp, room.id).then(() => {
+                  pushSuccessToast("Room booked successfully!");
+                  mutate();
+                });
+              }
+            }}
+          >
+            Book?{" "}
+            {room.book_by_seat
+              ? `(available: ${room.capacity - slotBookings.length}/${
+                  room.capacity
+                })`
+              : ""}
+          </td>
+        );
+      }
+    };
+
     return (
-      <td
-        className={`${styles.cell} ${styles.available}`}
-        onClick={async () => {
-          if (await confirmDialog("Are you sure you want to book this slot?")) {
-            await book(timestamp, roomName).then(() => {
-              pushSuccessToast("Room booked successfully!");
-              mutate();
-            });
-          }
-        }}
+      <Whisper
+        trigger={slotBookings.length ? "hover" : "none"}
+        placement="left"
+        controlId={`control-id-${date}-${room}`}
+        enterable
+        speaker={
+          <Popover
+            title={session.user.isAdmin ? "Details (admin-only)" : "Details"}
+          >
+            <p>
+              Bookings:
+              <ul>
+                {slotBookings.map((booking) => (
+                  <li>
+                    {session.user.isAdmin && (
+                      <a
+                        href={`mailto:${
+                          booking.email
+                        }?subject=EngHub%20Room%20${
+                          booking.roomName
+                        }%20Booking%20(${timestamp.toUTCString()})`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {booking.fullName}
+                        &nbsp;
+                      </a>
+                    )}
+                    {booking.id.substring(0, 5)}
+                  </li>
+                ))}
+              </ul>
+            </p>
+          </Popover>
+        }
       >
-        Book?
-      </td>
+        {renderBody()}
+      </Whisper>
     );
   };
 
@@ -143,26 +185,41 @@ export default function Scheduler({ session }) {
                 room.active && (
                   <Whisper
                     trigger="hover"
-                    placement="right"
-                    controlId={`room-title-${room.name}`}
+                    placement="left"
+                    controlId={`room-title-${room.id}`}
                     enterable
                     speaker={
-                      <Popover title={`Capacity: ${room.capacity}`}></Popover>
+                      <Popover
+                        title={
+                          <div>
+                            Capacity: {room.capacity}{" "}
+                            {room.admin_only
+                              ? "(only admins can book this room)"
+                              : ""}
+                            <br />
+                            {room.description}
+                          </div>
+                        }
+                      />
                     }
                   >
-                    <th className={styles.cell}>{room.name}</th>
+                    <th
+                      className={`${styles.cell} ${
+                        !isUserAllowedToBookRoom(room) ? styles.disabled : ""
+                      }`}
+                    >
+                      {room.name}
+                    </th>
                   </Whisper>
                 )
             )}
           </tr>
         </thead>
         <tbody>
-          {SLOTS.map((time) => (
+          {slots.map((time) => (
             <tr>
               <th className={`${styles.cell} ${styles.stickyCell}`}>{time}</th>
-              {rooms.map(
-                (room) => room.active && renderCell(date, time, room.name)
-              )}
+              {rooms.map((room) => room.active && renderCell(date, time, room))}
             </tr>
           ))}
         </tbody>
@@ -185,11 +242,15 @@ export default function Scheduler({ session }) {
             setDate(newDate);
           }}
           disabledDate={(date) =>
-            (!session.user.isAdmin && (date < minDate || date > maxDate))
+            (!session.user.isAdmin && (date < minDate || date > maxDate)) ||
+            date.getDay() % 6 == 0
           }
           ranges={[
             { label: "today", value: new Date() },
-            { label: "Tomorrow", value: (date) => addDaysToDate(date, 1) },
+            {
+              label: "Tomorrow",
+              value: (date) => addDaysToDate(date, 1, true),
+            },
           ]}
           oneTap
         />
@@ -197,12 +258,16 @@ export default function Scheduler({ session }) {
         <ButtonGroup className={styles.dateArrows}>
           <IconButton
             icon={<ArrowLeftIcon />}
-            onClick={() => setDate((oldDate) => addDaysToDate(oldDate, -1))}
+            onClick={() =>
+              setDate((oldDate) => addDaysToDate(oldDate, -1, true))
+            }
             disabled={!session.user.isAdmin && date <= minDate}
           />
           <IconButton
             icon={<ArrowRightIcon />}
-            onClick={() => setDate((oldDate) => addDaysToDate(oldDate, 1))}
+            onClick={() =>
+              setDate((oldDate) => addDaysToDate(oldDate, 1, true))
+            }
             disabled={!session.user.isAdmin && addDaysToDate(date, 1) > maxDate}
           />
         </ButtonGroup>

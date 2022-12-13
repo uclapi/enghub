@@ -56,10 +56,11 @@ export default NextAuth({
       // Adds the isAdmin flag to the session.user object
       if (token?.sub != null && session?.user != null) {
         session.user.isAdmin = token.isAdmin;
+        session.user.uclGroups = token.uclGroups;
       }
       return session;
     },
-    jwt: async ({ token }) => {
+    jwt: async ({ token, profile }) => {
       // Called when a JWT is created (on sign in) or updated
       // Checks to see if the user should have admin privileges based on our db
       const isAdmin =
@@ -68,21 +69,8 @@ export default NextAuth({
         })) != null;
 
       token.isAdmin = isAdmin;
+      if (profile) token.uclGroups = profile.ucl_groups;
       return token;
-    },
-    signIn: async ({ profile }) => {
-      // Called on sign in attempt to return true/false if user allowed to sign in
-      // Only Engineering students are allowed to book rooms in EngHub
-      if (profile.ucl_groups.indexOf("engscifac-all") > -1) {
-        return true;
-      }
-
-      // But admins may be non-Engineering
-      const usersCount = await prisma.enghub_users.count({
-        where: { email: { equals: profile.email }, is_admin: { equals: true } },
-      });
-
-      return usersCount === 1;
     },
   },
   events: {

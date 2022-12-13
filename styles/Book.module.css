@@ -1,3 +1,8 @@
+.header {
+  display: flex;
+  justify-content: space-around;
+}
+
 .showRoomLayout {
   font-size: 0.9em;
   width: 175px;
@@ -7,4 +12,5 @@
   margin: auto;
   cursor: pointer;
   font-style: italic;
+  margin-top: 10px;
 }
