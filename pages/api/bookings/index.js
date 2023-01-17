@@ -33,6 +33,12 @@ export default catchErrorsFrom(async (req, res) => {
         .json({ error: true, message: "You did not provide a date filter." });
     }
 
+    if (!req.query.buildingId) {
+      return res
+        .status(422)
+        .json({ error: true, message: "You did not provide a building filter." });
+    }
+
     const today = getToday();
     const start = new Date(req.query.date);
     const end = new Date(start);
@@ -110,7 +116,7 @@ export default catchErrorsFrom(async (req, res) => {
     }
 
     const room = await prisma.enghub_rooms.findFirst({
-      where: { id: req.body.room_id },
+      where: { id: req.body.room_id, active: true },
       include: { enghub_buildings: { select: { name: true } } },
     });
 
@@ -137,7 +143,10 @@ export default catchErrorsFrom(async (req, res) => {
     if (!allowedToBookRoom) {
       const whitelistedUser =
         await prisma.enghub_rooms_user_whitelist.findFirst({
-          where: { email: session.user.email },
+          where: {
+            email: session.user.email,
+            room_id: req.body.room_id,
+          },
         });
 
       if (whitelistedUser) allowedToBookRoom = true;
