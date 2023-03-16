@@ -10,7 +10,7 @@ import {
 } from "../../../lib/constants";
 import { prisma } from "../../../lib/db";
 import {
-  addDaysToDate,
+  getLatestDateBookableByNonAdmins,
   getStartHourOfDate,
   getToday,
   getWeekStartAndEndFromDate,
@@ -47,8 +47,7 @@ export default catchErrorsFrom(async (req, res) => {
 
     if (
       !session.user.isAdmin &&
-      (start < today ||
-        end > addDaysToDate(today, MAX_DAYS_IN_ADVANCE_BOOKABLE))
+      (start < today || end > getLatestDateBookableByNonAdmins())
     ) {
       return res.status(403).json({
         error: true,
@@ -204,10 +203,7 @@ export default catchErrorsFrom(async (req, res) => {
     }
 
     // Non-admins can only book a certain number of days in advance
-    if (
-      !session.user.isAdmin &&
-      datetime > addDaysToDate(new Date(), MAX_DAYS_IN_ADVANCE_BOOKABLE)
-    ) {
+    if (!session.user.isAdmin && datetime > getLatestDateBookableByNonAdmins()) {
       return res.status(403).json({
         error: true,
         message: `You can only book up to ${MAX_DAYS_IN_ADVANCE_BOOKABLE} days in advance.`,
