@@ -34,14 +34,6 @@
   border-color: orange;
 }
 
-.userWhitelist {
-  margin: 5px;
-}
-
-.userWhitelistItem {
-  margin-bottom: 15px;
-}
-
 .editInput {
   width: 50%;
   display: inline;

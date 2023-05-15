@@ -14,17 +14,11 @@ CREATE TABLE enghub_rooms (
     name VARCHAR(6) NOT NULL,
     building_id INTEGER NOT NULL REFERENCES enghub_buildings(id),
     description VARCHAR(200),
-    restricted_to_group VARCHAR(20),
+    restricted_to_groups VARCHAR(20),
     capacity INTEGER DEFAULT 0 NOT NULL,
     active BOOLEAN DEFAULT TRUE NOT NULL,
     admin_only BOOLEAN DEFAULT FALSE NOT NULL,
     book_by_seat BOOLEAN DEFAULT TRUE NOT NULL -- some rooms are bookable in their entirety; some are bookable per-seat
-);
-
-CREATE TABLE enghub_rooms_user_whitelist (
-    email VARCHAR(100),
-    room_id INTEGER REFERENCES enghub_rooms(id),
-    PRIMARY KEY (email, room_id)
 );
 
 CREATE TABLE enghub_bookings (

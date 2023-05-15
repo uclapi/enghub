@@ -285,18 +285,6 @@ describe('POST /api/bookings', () => {
     expect(res._getStatusCode()).toBe(422);
   });
 
-  test('cannot book if not in whitelist', async () => {
-    const date = addDaysToDate(getToday(), 1);
-    date.setHours(8);
-    mockUserOnce(users.nonAdmin);
-    const { req, res } = createMocks({
-      method: 'POST',
-      body: { datetime: date.toISOString(), room_id: rooms[4].id }
-    });
-    await handleBookings(req, res);
-    expect(res._getStatusCode()).toBe(403);
-  });
-
   test('redirects if not logged in', async () => {
     const { req, res } = createMocks({ method: 'POST' });
     await handleBookings(req, res);

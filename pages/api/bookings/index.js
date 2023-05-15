@@ -138,19 +138,6 @@ export default catchErrorsFrom(async (req, res) => {
       }
     }
 
-    // Only perform whitelist query as last resort
-    if (!allowedToBookRoom) {
-      const whitelistedUser =
-        await prisma.enghub_rooms_user_whitelist.findFirst({
-          where: {
-            email: session.user.email,
-            room_id: req.body.room_id,
-          },
-        });
-
-      if (whitelistedUser) allowedToBookRoom = true;
-    }
-
     if (!allowedToBookRoom) {
       return res.status(403).json({
         error: true,

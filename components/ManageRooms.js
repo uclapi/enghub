@@ -14,12 +14,7 @@ import styles from "../styles/ManageRooms.module.css";
 import EditIcon from "@rsuite/icons/Edit";
 import CheckOutlineIcon from "@rsuite/icons/CheckOutline";
 import CloseOutlineIcon from "@rsuite/icons/CloseOutline";
-import {
-  addRoom,
-  addUserToRoomWhitelist,
-  deleteUserFromRoomWhitelist,
-  updateRoom,
-} from "../lib/api";
+import { addRoom, updateRoom } from "../lib/api";
 import { pushSuccessToast } from "../lib/helpers";
 
 function AdminRoom({ room, handleManageRoom }) {
@@ -66,37 +61,6 @@ function EditCell({ initialValue, type, onSubmit, onCancel }) {
       />
       <CloseOutlineIcon className={styles.icon} onClick={() => onCancel()} />
     </>
-  );
-}
-
-function UserWhitelistInput({ room, onSuccess }) {
-  const [email, setEmail] = useState("");
-  return (
-    <Form
-      layout="inline"
-      onSubmit={() => {
-        addUserToRoomWhitelist(room.id, email).then(() => {
-          pushSuccessToast("User successfully added to room whitelist!");
-          onSuccess();
-        });
-      }}
-    >
-      <Form.Group>
-        <Form.Control
-          name="email"
-          required
-          pattern=".+@ucl\.ac\.uk"
-          value={email}
-          onChange={setEmail}
-          placeholder="e.g., zxxxxxx@ucl.ac.uk"
-          title="Please enter a valid UCL email address."
-          type="email"
-        />
-      </Form.Group>
-      <Button type="submit" appearance="primary">
-        Add user
-      </Button>
-    </Form>
   );
 }
 
@@ -226,36 +190,6 @@ function EditRoom({ room, mutate }) {
           </>
         )}
       </p>
-      <p>
-        User whitelist:
-        <br />
-        <i>
-          Use the whitelist feature if you want to grant access to specific
-          users, who aren't already covered by an existing Group.
-        </i>
-        <ul className={styles.userWhitelist}>
-          {room.user_whitelist.map((u) => (
-            <li className={styles.userWhitelistItem}>
-              {u.email}{" "}
-              <Button
-                size="xs"
-                color="red"
-                appearance="ghost"
-                onClick={() =>
-                  deleteUserFromRoomWhitelist(room.id, u.email).then(() => {
-                    mutate();
-                    pushSuccessToast(
-                      "User successfully removed from whitelist"
-                    );
-                  })
-                }
-              >
-                Delete?
-              </Button>
-            </li>
-          ))}
-        </ul>
-        <UserWhitelistInput room={room} onSuccess={mutate} />
       </p>
     </div>
   );

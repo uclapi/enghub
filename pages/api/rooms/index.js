@@ -20,7 +20,6 @@ export default catchErrorsFrom(async (req, res) => {
       ? await prisma.enghub_rooms.findMany({
           orderBy: [{ active: "desc" }, { name: "desc" }],
           where: { building_id: { equals: +req.query.buildingId } },
-          include: { enghub_rooms_user_whitelist: true },
         })
       : await prisma.enghub_rooms.findMany({
           where: {
@@ -33,16 +32,7 @@ export default catchErrorsFrom(async (req, res) => {
     // Return active rooms followed by admin-only rooms followed by inactive rooms
     rooms.sort((a, b) => a.admin_only - b.admin_only - (a.active - b.active));
 
-    return res.status(200).json({
-      rooms: rooms.map((r) => {
-        // Rename user whitelist field
-        if (r.enghub_rooms_user_whitelist) {
-          r.user_whitelist = [...r.enghub_rooms_user_whitelist];
-          delete r.enghub_rooms_user_whitelist;
-        }
-        return r;
-      }),
-    });
+    return res.status(200).json({ rooms });
   }
 
   if (req.method === "POST") {
