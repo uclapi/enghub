@@ -60,7 +60,7 @@ export default catchErrorsFrom(async (req, res) => {
     const fields = [
       "active",
       "book_by_seat",
-      "restricted_to_group",
+      "restricted_to_groups",
       "admin_only",
       "description",
     ];

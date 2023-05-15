@@ -46,8 +46,7 @@ export default catchErrorsFrom(async (req, res) => {
     if (!session.user.isAdmin) {
       return res.status(403).json({
         error: true,
-        message:
-          "You do not have permission to add new rooms to the system.",
+        message: "You do not have permission to add new rooms to the system.",
       });
     }
 

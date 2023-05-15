@@ -34,9 +34,10 @@ export default catchErrorsFrom(async (req, res) => {
     }
 
     if (!req.query.buildingId) {
-      return res
-        .status(422)
-        .json({ error: true, message: "You did not provide a building filter." });
+      return res.status(422).json({
+        error: true,
+        message: "You did not provide a building filter.",
+      });
     }
 
     const today = getToday();
@@ -131,8 +132,10 @@ export default catchErrorsFrom(async (req, res) => {
       allowedToBookRoom = true;
     } else if (!room.admin_only) {
       if (
-        room.restricted_to_group !== null &&
-        session.user.uclGroups.includes(room.restricted_to_group)
+        room.restricted_to_groups.length &&
+        room.restricted_to_groups.some((g) =>
+          session.user.uclGroups.includes(g)
+        )
       ) {
         allowedToBookRoom = true;
       }
@@ -190,7 +193,10 @@ export default catchErrorsFrom(async (req, res) => {
     }
 
     // Non-admins can only book a certain number of days in advance
-    if (!session.user.isAdmin && datetime > getLatestDateBookableByNonAdmins()) {
+    if (
+      !session.user.isAdmin &&
+      datetime > getLatestDateBookableByNonAdmins()
+    ) {
       return res.status(403).json({
         error: true,
         message: `You can only book up to ${MAX_DAYS_IN_ADVANCE_BOOKABLE} days in advance.`,

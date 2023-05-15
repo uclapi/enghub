@@ -12,6 +12,7 @@ import {
 import { useBuildings, useRooms } from "../lib/hooks";
 import styles from "../styles/ManageRooms.module.css";
 import EditIcon from "@rsuite/icons/Edit";
+import { TagInput } from "rsuite";
 import CheckOutlineIcon from "@rsuite/icons/CheckOutline";
 import CloseOutlineIcon from "@rsuite/icons/CloseOutline";
 import { addRoom, updateRoom } from "../lib/api";
@@ -35,7 +36,8 @@ function AdminRoom({ room, handleManageRoom }) {
         <br />
         Status: {status}
         <br />
-        {!!room.restricted_to_group && `Group: ${room.restricted_to_group}`}
+        {!!room.restricted_to_groups.length &&
+          `Groups: ${room.restricted_to_groups.join(", ")}`}
       </p>
 
       <Button color="primary" size="xs" onClick={() => handleManageRoom()}>
@@ -166,30 +168,18 @@ function EditRoom({ room, mutate }) {
         )}
       </p>
       <p>
-        Allowed User Group:{" "}
-        {editGroup ? (
-          <EditCell
-            type="text"
-            initialValue={room.restricted_to_group}
-            onCancel={() => setEditGroup(false)}
-            onSubmit={(group) => {
-              updateRoom(room.id, { group }).then(() => {
-                setEditGroup(false);
-                mutate();
-                pushSuccessToast("Room user group updated successfully!");
-              });
-            }}
-          />
-        ) : (
-          <>
-            {room.restricted_to_group ?? "N/A"}{" "}
-            <EditIcon
-              onClick={() => setEditGroup(true)}
-              className={styles.icon}
-            />
-          </>
-        )}
-      </p>
+        Only allow user groups:{" "}
+        <TagInput
+          value={room.restricted_to_groups}
+          block
+          trigger={["Enter", "Space", "Comma"]}
+          onChange={(groups) => {
+            updateRoom(room.id, { groups }).then(() => {
+              mutate();
+              pushSuccessToast("Room user group updated successfully!");
+            });
+          }}
+        />
       </p>
     </div>
   );
