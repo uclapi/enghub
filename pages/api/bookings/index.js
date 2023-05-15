@@ -132,7 +132,7 @@ export default catchErrorsFrom(async (req, res) => {
       allowedToBookRoom = true;
     } else if (!room.admin_only) {
       if (
-        room.restricted_to_groups.length &&
+        !room.restricted_to_groups.length ||
         room.restricted_to_groups.some((g) =>
           session.user.uclGroups.includes(g)
         )
