@@ -23,16 +23,16 @@ export default NextAuth({
       name: "UCL API",
       params: { grant_type: "authorization_code" },
       type: "oauth",
-      authorization: "https://uclapi.com/oauth/authorise",
+      authorization: `${process.env.UCLAPI_URL}/oauth/authorise`,
       token: {
-        url: "https://uclapi.com/oauth/token",
+        url: `${process.env.UCLAPI_URL}/oauth/token`,
         async request(context) {
           const tokens = await makeTokenRequest(context);
           return { tokens };
         },
       },
       userinfo: {
-        url: "https://uclapi.com/oauth/user/data",
+        url: `${process.env.UCLAPI_URL}/oauth/user/data`,
         async request(context) {
           return await makeUserInfoRequest(context);
         },
@@ -47,7 +47,7 @@ export default NextAuth({
           image: "",
         };
       },
-    }
+    },
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {

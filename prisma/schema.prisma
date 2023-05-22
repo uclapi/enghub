@@ -17,18 +17,17 @@ model enghub_bookings {
 }
 
 model enghub_rooms {
-  name                        String                        @db.VarChar(6)
-  capacity                    Int
-  active                      Boolean                       @default(true)
-  admin_only                  Boolean                       @default(false)
-  description                 String?                       @db.VarChar(200)
-  building_id                 Int
-  restricted_to_group         String?                       @db.VarChar(20)
-  book_by_seat                Boolean                       @default(true)
-  id                          Int                           @id @default(autoincrement())
-  enghub_buildings            enghub_buildings              @relation(fields: [building_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  enghub_bookings             enghub_bookings[]
-  enghub_rooms_user_whitelist enghub_rooms_user_whitelist[]
+  name                 String            @db.VarChar(6)
+  capacity             Int
+  active               Boolean           @default(true)
+  admin_only           Boolean           @default(false)
+  description          String?           @db.VarChar(200)
+  building_id          Int
+  restricted_to_groups String[]
+  book_by_seat         Boolean           @default(true)
+  id                   Int               @id @default(autoincrement())
+  enghub_buildings     enghub_buildings  @relation(fields: [building_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  enghub_bookings      enghub_bookings[]
 }
 
 model enghub_users {
@@ -42,12 +41,4 @@ model enghub_buildings {
   id           Int            @id @default(autoincrement())
   name         String         @db.VarChar(50)
   enghub_rooms enghub_rooms[]
-}
-
-model enghub_rooms_user_whitelist {
-  email        String       @db.VarChar(100)
-  room_id      Int
-  enghub_rooms enghub_rooms @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([email, room_id])
 }

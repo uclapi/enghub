@@ -26,13 +26,4 @@ export default async () => {
       id: b.id, room_id: b.roomId, datetime: b.datetime, email: b.email,
     }))
   });
-
-  await prisma.enghub_rooms_user_whitelist.createMany({
-    data:
-      [
-        { email: users.nonAdmin.email, room_id: 11 },
-        { email: users.nonAdmin.email, room_id: 12 },
-        { email: users.nonAdmin.email, room_id: 14 },
-      ]
-  });
 };

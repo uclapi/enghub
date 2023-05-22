@@ -12,14 +12,10 @@ import {
 import { useBuildings, useRooms } from "../lib/hooks";
 import styles from "../styles/ManageRooms.module.css";
 import EditIcon from "@rsuite/icons/Edit";
+import { TagInput } from "rsuite";
 import CheckOutlineIcon from "@rsuite/icons/CheckOutline";
 import CloseOutlineIcon from "@rsuite/icons/CloseOutline";
-import {
-  addRoom,
-  addUserToRoomWhitelist,
-  deleteUserFromRoomWhitelist,
-  updateRoom,
-} from "../lib/api";
+import { addRoom, updateRoom } from "../lib/api";
 import { pushSuccessToast } from "../lib/helpers";
 
 function AdminRoom({ room, handleManageRoom }) {
@@ -40,7 +36,8 @@ function AdminRoom({ room, handleManageRoom }) {
         <br />
         Status: {status}
         <br />
-        {!!room.restricted_to_group && `Group: ${room.restricted_to_group}`}
+        {!!room.restricted_to_groups.length &&
+          `Groups: ${room.restricted_to_groups.join(", ")}`}
       </p>
 
       <Button color="primary" size="xs" onClick={() => handleManageRoom()}>
@@ -66,37 +63,6 @@ function EditCell({ initialValue, type, onSubmit, onCancel }) {
       />
       <CloseOutlineIcon className={styles.icon} onClick={() => onCancel()} />
     </>
-  );
-}
-
-function UserWhitelistInput({ room, onSuccess }) {
-  const [email, setEmail] = useState("");
-  return (
-    <Form
-      layout="inline"
-      onSubmit={() => {
-        addUserToRoomWhitelist(room.id, email).then(() => {
-          pushSuccessToast("User successfully added to room whitelist!");
-          onSuccess();
-        });
-      }}
-    >
-      <Form.Group>
-        <Form.Control
-          name="email"
-          required
-          pattern=".+@ucl\.ac\.uk"
-          value={email}
-          onChange={setEmail}
-          placeholder="e.g., zxxxxxx@ucl.ac.uk"
-          title="Please enter a valid UCL email address."
-          type="email"
-        />
-      </Form.Group>
-      <Button type="submit" appearance="primary">
-        Add user
-      </Button>
-    </Form>
   );
 }
 
@@ -202,60 +168,18 @@ function EditRoom({ room, mutate }) {
         )}
       </p>
       <p>
-        Allowed User Group:{" "}
-        {editGroup ? (
-          <EditCell
-            type="text"
-            initialValue={room.restricted_to_group}
-            onCancel={() => setEditGroup(false)}
-            onSubmit={(group) => {
-              updateRoom(room.id, { group }).then(() => {
-                setEditGroup(false);
-                mutate();
-                pushSuccessToast("Room user group updated successfully!");
-              });
-            }}
-          />
-        ) : (
-          <>
-            {room.restricted_to_group ?? "N/A"}{" "}
-            <EditIcon
-              onClick={() => setEditGroup(true)}
-              className={styles.icon}
-            />
-          </>
-        )}
-      </p>
-      <p>
-        User whitelist:
-        <br />
-        <i>
-          Use the whitelist feature if you want to grant access to specific
-          users, who aren't already covered by an existing Group.
-        </i>
-        <ul className={styles.userWhitelist}>
-          {room.user_whitelist.map((u) => (
-            <li className={styles.userWhitelistItem}>
-              {u.email}{" "}
-              <Button
-                size="xs"
-                color="red"
-                appearance="ghost"
-                onClick={() =>
-                  deleteUserFromRoomWhitelist(room.id, u.email).then(() => {
-                    mutate();
-                    pushSuccessToast(
-                      "User successfully removed from whitelist"
-                    );
-                  })
-                }
-              >
-                Delete?
-              </Button>
-            </li>
-          ))}
-        </ul>
-        <UserWhitelistInput room={room} onSuccess={mutate} />
+        Only allow user groups:{" "}
+        <TagInput
+          value={room.restricted_to_groups}
+          block
+          trigger={["Enter", "Space", "Comma"]}
+          onChange={(groups) => {
+            updateRoom(room.id, { groups }).then(() => {
+              mutate();
+              pushSuccessToast("Room user group updated successfully!");
+            });
+          }}
+        />
       </p>
     </div>
   );
