@@ -1,4 +1,5 @@
-import { useSession, getSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth';
 import { addDaysToDate, getToday } from '../../lib/helpers';
 
 // XXX: the jest.mock() needs to be called in any file that imports mockUser!
@@ -6,6 +7,7 @@ import { addDaysToDate, getToday } from '../../lib/helpers';
 
 export const mockUserOnce = (mockUserDetails) => {
   const originalModule = jest.requireActual('next-auth/react');
+  const originalModule2 = jest.requireActual('next-auth');
   const mockSession = {
     user: mockUserDetails,
     expires: new Date(Date.now() + 2 * 86400).toISOString()
@@ -16,10 +18,8 @@ export const mockUserOnce = (mockUserDetails) => {
       ? ({ data: mockSession, status: 'authenticated' })
       : originalModule.useSession
   );
-  getSession.mockReturnValueOnce(
-    mockUserDetails
-      ? mockSession
-      : originalModule.getSession
+  getServerSession.mockReturnValueOnce(
+    mockUserDetails ? mockSession : originalModule2.getServerSession
   );
 };
 

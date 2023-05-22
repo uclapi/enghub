@@ -1,9 +1,9 @@
-import { getSession } from "next-auth/react";
+import { getServerAuthSession } from "./auth/[...nextauth]";
 import { prisma } from "../../lib/db";
 import { catchErrorsFrom } from "../../lib/serverHelpers";
 
 export default catchErrorsFrom(async (req, res) => {
-  const session = await getSession({ req });
+  const session = await getServerAuthSession({ req, res });
   if (!session) {
     return res.redirect("/");
   }
@@ -37,13 +37,11 @@ export default catchErrorsFrom(async (req, res) => {
       return res.status(200).json({ error: false });
     } catch (err) {
       console.error("Failed to create new admin", err);
-      return res
-        .status(500)
-        .json({
-          error: true,
-          message:
-            "An unexpected error occurred. Please try again later or contact us if the error persists.",
-        });
+      return res.status(500).json({
+        error: true,
+        message:
+          "An unexpected error occurred. Please try again later or contact us if the error persists.",
+      });
     }
   }
 });

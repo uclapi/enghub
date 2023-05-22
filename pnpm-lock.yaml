@@ -12,7 +12,7 @@ specifiers:
   jest: ^29.3.1
   nanoid: ^3.2.0
   next: ^12.3.4
-  next-auth: ^4.1.0
+  next-auth: ^4.22.1
   node-mocks-http: ^1.12.1
   prisma: '4'
   react: 17.0.2
@@ -28,7 +28,7 @@ dependencies:
   ics: 2.41.0
   nanoid: 3.3.4
   next: 12.3.4_sfoxds7t5ydpegc3knd667wn6m
-  next-auth: 4.18.6_dwjfwrt6uv2f53xn6wotzcxyoa
+  next-auth: 4.22.1_dwjfwrt6uv2f53xn6wotzcxyoa
   react: 17.0.2
   react-dom: 17.0.2_react@17.0.2
   rsuite: 5.23.2_sfoxds7t5ydpegc3knd667wn6m
@@ -2983,8 +2983,8 @@ packages:
       - ts-node
     dev: true
 
-  /jose/4.11.1:
-    resolution: {integrity: sha512-YRv4Tk/Wlug8qicwqFNFVEZSdbROCHRAC6qu/i0dyNKr5JQdoa2pIGoS04lLO/jXQX7Z9omoNewYIVIxqZBd9Q==}
+  /jose/4.14.4:
+    resolution: {integrity: sha512-j8GhLiKmUAh+dsFXlX1aJCbt5KMibuKb+d7j1JaOJG6s2UjX1PQlW+OKB/sD4a/5ZYF4RcmYmLSndOoU3Lt/3g==}
     dev: false
 
   /js-tokens/4.0.0:
@@ -3218,9 +3218,8 @@ packages:
     engines: {node: '>= 0.6'}
     dev: true
 
-  /next-auth/4.18.6_dwjfwrt6uv2f53xn6wotzcxyoa:
-    resolution: {integrity: sha512-0TQwbq5X9Jyd1wUVYUoyvHJh4JWXeW9UOcMEl245Er/Y5vsSbyGJHt8M7xjRMzk9mORVMYehoMdERgyiq/jCgA==}
-    engines: {node: ^12.19.0 || ^14.15.0 || ^16.13.0 || ^18.12.0}
+  /next-auth/4.22.1_dwjfwrt6uv2f53xn6wotzcxyoa:
+    resolution: {integrity: sha512-NTR3f6W7/AWXKw8GSsgSyQcDW6jkslZLH8AiZa5PQ09w1kR8uHtR9rez/E9gAq/o17+p0JYHE8QjF3RoniiObA==}
     peerDependencies:
       next: ^12.2.5 || ^13
       nodemailer: ^6.6.5
@@ -3233,10 +3232,10 @@ packages:
       '@babel/runtime': 7.21.0
       '@panva/hkdf': 1.0.2
       cookie: 0.5.0
-      jose: 4.11.1
+      jose: 4.14.4
       next: 12.3.4_sfoxds7t5ydpegc3knd667wn6m
       oauth: 0.9.15
-      openid-client: 5.3.1
+      openid-client: 5.4.2
       preact: 10.11.3
       preact-render-to-string: 5.2.6_preact@10.11.3
       react: 17.0.2
@@ -3390,8 +3389,8 @@ packages:
       es-abstract: 1.20.5
     dev: true
 
-  /oidc-token-hash/5.0.1:
-    resolution: {integrity: sha512-EvoOtz6FIEBzE+9q253HsLCVRiK/0doEJ2HCvvqMQb3dHZrP3WlJKYtJ55CRTw4jmYomzH4wkPuCj/I3ZvpKxQ==}
+  /oidc-token-hash/5.0.3:
+    resolution: {integrity: sha512-IF4PcGgzAr6XXSff26Sk/+P4KZFJVuHAJZj3wgO3vX2bMdNVp/QXTP3P7CEm9V1IdG8lDLY3HhiqpsE/nOwpPw==}
     engines: {node: ^10.13.0 || >=12.0.0}
     dev: false
 
@@ -3408,13 +3407,13 @@ packages:
       mimic-fn: 2.1.0
     dev: true
 
-  /openid-client/5.3.1:
-    resolution: {integrity: sha512-RLfehQiHch9N6tRWNx68cicf3b1WR0x74bJWHRc25uYIbSRwjxYcTFaRnzbbpls5jroLAaB/bFIodTgA5LJMvw==}
+  /openid-client/5.4.2:
+    resolution: {integrity: sha512-lIhsdPvJ2RneBm3nGBBhQchpe3Uka//xf7WPHTIglery8gnckvW7Bd9IaQzekzXJvWthCMyi/xVEyGW0RFPytw==}
     dependencies:
-      jose: 4.11.1
+      jose: 4.14.4
       lru-cache: 6.0.0
       object-hash: 2.2.0
-      oidc-token-hash: 5.0.1
+      oidc-token-hash: 5.0.3
     dev: false
 
   /optionator/0.9.1:

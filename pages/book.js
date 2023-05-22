@@ -1,5 +1,5 @@
 import InfoOutlineIcon from "@rsuite/icons/InfoOutline";
-import { getSession } from "next-auth/react";
+import { getServerAuthSession } from "./api/auth/[...nextauth]";
 import Head from "next/head";
 import { useState } from "react";
 import { Message, Modal, Panel, SelectPicker } from "rsuite";
@@ -77,5 +77,5 @@ export default function Book({ session }) {
 }
 
 export async function getServerSideProps(ctx) {
-  return { props: { session: await getSession(ctx) } };
+  return { props: { session: await getServerAuthSession(ctx) } };
 }

@@ -1,4 +1,4 @@
-import { getSession } from "next-auth/react";
+import { getServerAuthSession } from "../auth/[...nextauth]";
 import {
   BOOKING_ID_ALPHABET,
   BOOKING_ID_LENGTH,
@@ -21,7 +21,7 @@ import { createEvent } from "ics";
 import { customAlphabet } from "nanoid";
 
 export default catchErrorsFrom(async (req, res) => {
-  const session = await getSession({ req });
+  const session = await getServerAuthSession({ req, res });
   if (!session) {
     return res.redirect("/");
   }

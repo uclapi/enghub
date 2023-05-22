@@ -1,4 +1,4 @@
-import { getSession } from "next-auth/react";
+import { getServerAuthSession } from "./api/auth/[...nextauth]";
 import Head from "next/head";
 import { Button, Loader, Message, Panel } from "rsuite";
 import LoginMessage from "../components/LoginMessage.react";
@@ -119,5 +119,5 @@ export default function MyBookings({ session }) {
 }
 
 export async function getServerSideProps(ctx) {
-  return { props: { session: await getSession(ctx) } };
+  return { props: { session: await getServerAuthSession(ctx) } };
 }

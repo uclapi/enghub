@@ -1,8 +1,8 @@
-import { getSession } from "next-auth/react";
 import Head from "next/head";
 import { useState } from "react";
 import { Panel, Button, Form, Input } from "rsuite";
 import LoginMessage from "../components/LoginMessage.react";
+import { getServerAuthSession } from "./api/auth/[...nextauth]";
 import { addAdmin, updateRoom } from "../lib/api";
 import { pushErrorToast, pushSuccessToast } from "../lib/helpers";
 import { useRooms } from "../lib/hooks";
@@ -77,5 +77,5 @@ export default function Admin({ session }) {
 }
 
 export async function getServerSideProps(ctx) {
-  return { props: { session: await getSession(ctx) } };
+  return { props: { session: await getServerAuthSession(ctx) } };
 }

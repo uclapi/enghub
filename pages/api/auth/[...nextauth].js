@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import { prisma } from "../../../lib/db";
+import { getServerSession } from "next-auth";
 
 const makeTokenRequest = async (context) =>
   fetch(
@@ -16,7 +17,7 @@ const makeUserInfoRequest = async (context) =>
  * We use a custom OAuth provider to point NextAuth.js towards UCL API's OAuth system.
  * We also use NextAuth.js callbacks to ensure only Engineering users can login, and to grant admin privileges.
  */
-export default NextAuth({
+const authOptions = {
   providers: [
     {
       id: "uclapi",
@@ -92,4 +93,9 @@ export default NextAuth({
   session: {
     maxAge: 24 * 60 * 60, // One day idle session expiry
   },
-});
+};
+
+export const getServerAuthSession = (context) =>
+  getServerSession(context.req, context.res, authOptions);
+
+export default NextAuth(authOptions);
