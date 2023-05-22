@@ -3,6 +3,7 @@ import handleRoom from '../../pages/api/rooms/[roomId]';
 import { PrismaClient } from "@prisma/client";
 import { mockUserOnce, users } from './test_helpers.js';
 jest.mock("next-auth/react");
+jest.mock("next-auth");
 
 const prisma = new PrismaClient();
 afterAll(async () => { await prisma.$disconnect(); });

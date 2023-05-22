@@ -2,6 +2,7 @@ import { createMocks } from 'node-mocks-http';
 import handleMyBookings from '../../pages/api/my_bookings';
 import { mockUserOnce, users } from './test_helpers';
 jest.mock("next-auth/react");
+jest.mock("next-auth");
 
 describe('/api/my_bookings', () => {
   test('returns bookings for logged in user', async () => {

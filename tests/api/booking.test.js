@@ -3,6 +3,7 @@ import handleBooking from '../../pages/api/bookings/[bookingId]';
 import { PrismaClient } from "@prisma/client";
 import { mockUserOnce, bookings, users } from './test_helpers';
 jest.mock("next-auth/react");
+jest.mock("next-auth");
 
 const prisma = new PrismaClient();
 afterAll(async () => { await prisma.$disconnect(); });

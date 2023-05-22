@@ -4,7 +4,7 @@ import handleAdmins from '../../pages/api/admins';
 import { PrismaClient } from "@prisma/client";
 import { mockUserOnce, users } from './test_helpers';
 jest.mock("next-auth/react");
-
+jest.mock("next-auth");
 const prisma = new PrismaClient();
 afterAll(async () => { await prisma.$disconnect(); });
 
