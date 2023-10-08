@@ -264,7 +264,7 @@ export default catchErrorsFrom(async (req, res) => {
             }).format(datetime),
             time_long: new Intl.DateTimeFormat("en-GB", {
               hour: "numeric",
-              hour12: true,
+              hourCycle: "h12",
               minute: "2-digit",
               timeZone: "Europe/London",
             }).format(datetime),
